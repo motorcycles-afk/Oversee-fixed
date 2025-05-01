@@ -1,0 +1,217 @@
+<br>
+<style>
+    .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+    #console-output {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.2;
+    }
+    .console-line {
+      padding: 4px 6px;
+      margin: 1px 0;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .console-line:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+    .console-line-content {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .console-line-info {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0.5;
+      transition: opacity 0.2s ease;
+      font-size: 0.7rem;
+    }
+    .console-line:hover .console-line-info {
+      opacity: 1;
+    }
+    .copy-icon, .tick-icon {
+      cursor: pointer;
+  display:none;
+      width: 12px;
+      height: 12px;
+    }
+    .internal-icon {
+      margin-right: 2px;
+      color: #fbbf24;
+      width: 12px;
+      height: 12px;
+    }
+    #console-output::-webkit-scrollbar {
+      width: 6px;
+    }
+    #console-output::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    #console-output::-webkit-scrollbar-thumb {
+      background-color: rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+    }
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .slide-in {
+      animation: slideIn 0.3s ease-out forwards;
+    }
+    .transition-all {
+      transition: all 0.3s ease;
+    }
+    .hover-scale {
+      transition: transform 0.2s ease;
+    }
+    .card {
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+    .card:hover {
+      box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+      transform: translateY(-2px);
+    }
+    .loading-spinner {
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top: 3px solid #fff;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .fade-out {
+      animation: fadeOut 0.5s ease-out forwards;
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+  </style>
+    
+    <nav class="relative z-50 mb-6">
+      <div id="menu-items" class="hidden md:block">
+        <div class="rounded-full bg-white/5 backdrop-blur-xl p-1.5 inline-flex items-center">
+          <!-- Existing Links -->
+          <a href="/instance/<%= req.params.id %>" class="srv-link group rounded-full px-4 py-1.5 text-sm text-gray-300 hover:text-indigo-300 transition-all duration-200 hover:scale-95">
+            Console
+          </a>
+          <a href="/instance/<%= req.params.id %>/files" class="srv-link group rounded-full px-4 py-1.5 text-sm text-gray-300 hover:text-indigo-300 transition-all duration-200 hover:scale-95">
+            Files
+          </a>
+          <a href="/instance/<%= req.params.id %>/users" class="srv-link group rounded-full px-4 py-1.5 text-sm text-gray-300 hover:text-indigo-300 transition-all duration-200 hover:scale-95">
+            Sub Users
+          </a>
+          <a href="/instance/<%= req.params.id %>/ftp" class="srv-link group rounded-full px-4 py-1.5 text-sm text-gray-300 hover:text-indigo-300 transition-all duration-200 hover:scale-95">
+            FTP
+          </a>
+          <a href="/instance/<%= req.params.id %>/archives" class="srv-link group rounded-full px-4 py-1.5 text-sm text-gray-300 hover:text-indigo-300 transition-all duration-200 hover:scale-95">
+            Backups
+          </a>
+          <a href="/instance/<%= req.params.id %>/network" class="srv-link group rounded-full px-4 py-1.5 text-sm text-gray-300 hover:text-indigo-300 transition-all duration-200 hover:scale-95">
+            Network
+          </a>
+          <a href="/instance/<%= req.params.id %>/startup" class="srv-link group rounded-full px-4 py-1.5 text-sm text-gray-300 hover:text-indigo-300 transition-all duration-200 hover:scale-95">
+            Settings
+          </a>
+          <% if (instance.Image == "ghcr.io/ma4z-sys/yolks:minecraft_java_21") { %>
+          <a href="/instance/<%= req.params.id %>/plugins" class="srv-link group rounded-full px-4 py-1.5 text-sm text-gray-300 hover:text-indigo-300 transition-all duration-200 hover:scale-95">
+            Plugin Manager
+          </a>
+          <% } else if (instance.Image == "ghcr.io/ma4z-sys/yolks:java") { %>
+            <a href="/instance/<%= req.params.id %>/plugins" class="srv-link group rounded-full px-4 py-1.5 text-sm text-gray-300 hover:text-indigo-300 transition-all duration-200 hover:scale-95">
+              Plugin Manager
+            </a>
+          <% } %>
+          <% addons.plugins.forEach(plugin => { %>
+          <% if (plugin.instancesidebar) { %>
+          <% Object.entries(plugin.instancesidebar).forEach(([key, value]) => { %>
+          <a href="<%= (value.url).replace('%id%', req.params.id) %>" class="srv-link group rounded-full px-4 py-1.5 text-sm text-gray-300 hover:text-indigo-300 transition-all duration-200 hover:scale-95">
+            <%= key %>
+          </a>
+          <% }); %>
+          <% } %>
+          <% }); %>
+        </div>
+      </div>
+    
+      <!-- Mobile Button -->
+      <div class="block md:hidden">
+        <button 
+          onclick="openSlider()" 
+          class="rounded-full bg-indigo-600 text-white px-4 py-2 text-sm font-semibold transition-all duration-200 hover:bg-indigo-700">
+          Open Menu
+        </button>
+      </div>
+    </nav>
+
+   
+<!-- Mobile Sidebar -->
+<div id="mobileSidebar" class="fixed top-0 left-0 w-full h-full bg-black/80 rounded-xl p-6 mb-6 shadow-xl z-50 transform -translate-x-full transition-transform duration-300 ease-in-out">
+  <div 
+  class="bg-red-600 text-center text-white p-2 cursor-pointer hover:bg-red-700 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105" 
+  onclick="closeSlider()">
+  Close
+</div>
+  <div class="flex flex-col text-white mb-12 rounded-xl">
+    <a href="/instance/<%= req.params.id %>" class="py-2 px-4 hover:bg-white/5">Console</a>
+    <a href="/instance/<%= req.params.id %>/files" class="py-2 px-4 hover:bg-white/5">Files</a>
+    <a href="/instance/<%= req.params.id %>/users" class="py-2 px-4 hover:bg-white/5">Sub Users</a>
+    <a href="/instance/<%= req.params.id %>/ftp" class="py-2 px-4 hover:bg-white/5">FTP</a>
+    <a href="/instance/<%= req.params.id %>/archives" class="py-2 px-4 hover:bg-white/5">Backups</a>
+    <a href="/instance/<%= req.params.id %>/network" class="py-2 px-4 hover:bg-white/5">Network</a>
+    <a href="/instance/<%= req.params.id %>/startup" class="py-2 px-4 hover:bg-white/5">Settings</a>
+    <% if (instance.Image == "ghcr.io/ma4z-sys/yolks:minecraft_java_21") { %>
+      <a href="/instance/<%= req.params.id %>/plugins" class="py-2 px-4 hover:bg-white/5">Plugin Manager</a>
+    <% } %>
+  <% if (instance.Image == "ghcr.io/ma4z-sys/yolks:java") { %>
+      <a href="/instance/<%= req.params.id %>/plugins" class="py-2 px-4 hover:bg-white/5">Plugin Manager</a>
+    <% } %>
+    <% addons.plugins.forEach(plugin => { %>
+      <% if (plugin.instancesidebar) { %>
+        <% Object.entries(plugin.instancesidebar).forEach(([key, value]) => { %>
+          <a href="<%= (value.url).replace('%id%', req.params.id) %>" class="py-2 px-4 hover:bg-white/5"><%= key %></a>
+        <% }); %>
+      <% } %>
+    <% }); %>
+  </div>
+</div>
+
+<script>
+  function openSlider() {
+    document.getElementById("mobileSidebar").classList.add("translate-x-0");
+    document.getElementById("mobileSidebar").classList.remove("-translate-x-full");
+  }
+
+  function closeSlider() {
+    document.getElementById("mobileSidebar").classList.add("-translate-x-full");
+    document.getElementById("mobileSidebar").classList.remove("translate-x-0");
+  }
+</script>

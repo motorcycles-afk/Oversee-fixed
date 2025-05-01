@@ -1,0 +1,302 @@
+<%- include('../components/template') %>
+<style>
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+  }
+  .modal-overlay.active .modal-content {
+      transform: scale(1);
+      opacity: 1;
+  }
+</style>
+<main id="content">
+    
+    <%- include('../components/instance') %>
+    
+<div class="bg-white/5 rounded-xl overflow-hidden ">
+    <div class="bg-white/5 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <h2 class="text-lg font-semibold text-white">Rename Server</h2>
+        </div>
+    </div>
+    <div class="p-6">
+        <div class="flex space-x-4">
+            <input type="text" id="nameServer" class="flex-1 p-3 bg-black/20 text-white border border-transparent rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 transition" placeholder="<%= instance.Name %>">
+            <button id="saveName" class="bg-indigo-500 text-sm hover:bg-indigo-600 text-white font-medium px-6 rounded-xl flex items-center space-x-2 transition duration-200 hover:scale-95">
+                <span>Rename</span>
+            </button>
+        </div>
+    </div>
+</div>
+<br>
+<!-- Server Reinstall Panel -->
+<div class="bg-white/5 rounded-xl overflow-hidden ">
+    <div class="bg-white/5 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <h2 class="text-lg font-semibold text-white">Reinstall Server</h2>
+        </div>
+    </div>
+    <div class="p-6 space-y-4">
+        <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+            <div class="flex items-start space-x-3">
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-6 w-6 text-amber-400 mt-0.5">
+<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+</svg>
+
+                <div class="flex-1">
+                    <h3 class="text-md font-medium text-amber-400">Warning</h3>
+                    <p class="mt-1 text-gray-300 text-sm">This action will completely reset your server to its default state. All files, databases, and configurations will be permanently deleted.</p>
+                </div>
+            </div>
+        </div>
+        <div class="flex justify-end">
+            <button onclick="reinstall()" class="bg-amber-500 hover:bg-amber-600 text-sm text-white font-medium px-6 py-2 rounded-xl flex items-center space-x-2 transition duration-200 hover:scale-95">
+                <span>Reinstall</span>
+            </button>
+        </div>
+    </div>
+</div>
+<br>
+<!-- Server Reinstall Panel -->
+<div class="bg-white/5 rounded-xl overflow-hidden ">
+    <div class="bg-white/5 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <h2 class="text-lg font-semibold text-white">Delete Server</h2>
+        </div>
+    </div>
+    <div class="p-6 space-y-4">
+        <div class="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+            <div class="flex items-start space-x-3">
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-6 w-6 text-red-400 mt-0.5">
+<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+</svg>
+
+                <div class="flex-1">
+                    <h3 class="text-md font-medium text-white">Warning</h3>
+                    <p class="mt-1 text-gray-300 text-sm">This action will completely remove your server, All files, databases, and configurations will be permanently deleted.</p>
+                </div>
+            </div>
+        </div>
+        <div class="flex justify-end">
+            <button onclick="window.location.href='/delete/<%= req.params.id %>'" class="bg-red-500 hover:bg-red-600 text-sm text-white font-medium px-6 py-2 rounded-xl flex items-center space-x-2 transition duration-200 hover:scale-95">
+                <span>Delete</span>
+            </button>
+        </div>
+    </div>
+</div>
+<br>
+<div class="bg-white/5 rounded-xl overflow-hidden ">
+    <div class="bg-white/5 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <h2 class="text-lg font-semibold text-white">Server Information</h2>
+        </div>
+    </div>
+    <div class="p-6 space-y-4">
+        <td>   
+            <span class="text-xs bg-zinc-500/20 text-white px-2 py-1 rounded shadow-sm">
+                      <code class="font-mono">
+                       { 
+                          "Name": '<%= instance.Name %>',
+                          "Id": '<%= instance.Id %>',
+                          "IP": '<%= instance.Node.address %>:<%= instance.Primary %>',
+                          "Image": '<%= instance.Image %>',
+                          "ContainerId": '<%= instance.ContainerId %>'
+                       }
+                      </code>
+                  </span>
+                </td> 
+    </div>
+</div>
+<br>
+    <div class="space-y-4">
+        <% 
+            const envObject = {};
+            if (instance.Env) {
+                instance.Env.forEach(function(item) {
+                    const [key, value] = item.split('=');
+                    envObject[key] = value;
+                });
+            }
+        %>
+        <div class="bg-white/5 rounded-xl p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Advanced Settings</h2>
+        <div id="variables-list" class="space-y-4">
+           
+        <% if (instance.imageData && instance.imageData.Variables) { %>
+            <% Object.keys(instance.imageData.Variables).forEach(function(variableName) { %>
+                <% const variable = instance.imageData.Variables[variableName]; %>
+                
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-semibold"><%= variableName %></h3>
+                    </div>
+                    <button class="edit-variable bg-indigo-500 hover:bg-indigo-700 text-white font-medium py-1.5 px-4 rounded-full transition" data-variable-name="<%= variableName %>" data-variable-value="<%= envObject[variableName] || '' %>">
+                        Edit
+                    </button>
+                </div>
+                <div class="mt-2">
+                    <span class="text-sm font-medium text-gray-400">Current Value:</span>
+                    <span class="text-sm ml-2"><%= envObject[variableName] || '' %></span>
+                </div>
+            <% }); %>
+            <% } else { %>
+                <div class="flex items-center justify-center p-4 bg-white/5 text-white rounded-lg shadow-md">
+                  <p class="text-xl font-semibold">No Variables Found</p>
+                </div>
+              <% } %>
+              
+    </div>
+</div>
+
+<!-- Edit Variable Modal (Moved outside the loop) -->
+<div id="edit-variable-modal" class="modal-overlay z-50">
+    <div class="modal-content w-full max-w-md">
+        <h3 class="text-xl font-semibold mb-4" id="modal-title">Edit Variable</h3>
+        <input type="text" id="variable-value" class="w-full p-2 mb-4 bg-white/5 border-none outline-none ring-none transition focus:ring-2 focus:ring-indigo-500 text-white rounded" placeholder="Variable Value">
+        <div class="flex justify-end">
+            <button onclick="closeModal('edit-variable-modal')" class="bg-neutral-600 hover:bg-neutral-700 text-white font-medium py-2 px-4 rounded-full hover:scale-95 transition mr-2">Cancel</button>
+            <button id="save-variable" class="bg-indigo-500 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-full hover:scale-95 transition">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmation-modal" class="fixed inset-0 bg-black z-50 bg-opacity-50 flex items-center justify-center hidden">
+<div class="bg-[#1a1c20] backdrop-blur rounded-xl p-6 max-w-md w-full">
+    <h3 class="text-xl font-semibold mb-4 text-white" id="modal-title"></h3>
+    <p class="text-gray-300 mb-4" id="modal-message"></p>
+    <div class="flex justify-end space-x-4">
+        <button id="modal-cancel" class="bg-zinc-600 hover:bg-zinc-700 text-white font-medium py-2 px-4 rounded-lg transition">Cancel</button>
+        <button id="modal-confirm" class="bg-indigo-500 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition">Confirm</button>
+    </div>
+</div>
+</div>
+<script>
+    // Function to show the confirmation modal
+function showConfirmationModal(title, message, onConfirm) {
+    const modal = document.getElementById('confirmation-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalMessage = document.getElementById('modal-message');
+    const confirmButton = document.getElementById('modal-confirm');
+    const cancelButton = document.getElementById('modal-cancel');
+
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    modal.classList.remove('hidden');
+
+    confirmButton.onclick = () => {
+        onConfirm();
+        modal.classList.add('hidden');
+    };
+
+    cancelButton.onclick = () => {
+        modal.classList.add('hidden');
+    };
+}
+
+async function reinstall() {
+const instanceId = '<%= req.params.id %>';
+showConfirmationModal(
+    'Reinstall Server',
+    'Are you sure you want to reinstall the server? This action cannot be undone and all data will be lost.',
+    async function() { // Pass an async callback as the third argument
+        try {
+            const response = await fetch(`/instance/reinstall/${instanceId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                setTimeout(() => {
+                    alert('Server reinstalled successfully!');
+                    setTimeout(() => {
+                        window.location.href = `/instance/${instanceId}/settings`;
+                    }, 1000);
+                }, 2000);
+            } else {
+                alert('Error reinstalling server: ' + response.statusText);
+            }
+        } catch (error) {
+            console.error('Error during POST request:', error);
+            alert('An error occurred.');
+        }
+    }
+);
+}
+
+</script>
+<script>
+
+  document.getElementById('saveName').addEventListener('click', function() {
+        const name = document.getElementById('nameServer').value;
+        window.location.href = '/instance/<%= req.params.id %>/change/name/' + name;
+   });
+    // Function to open the modal with the correct variable name and value
+    function openEditModal(variableName, currentValue) {
+        const modal = document.getElementById('edit-variable-modal');
+        const valueInput = document.getElementById('variable-value');
+
+        document.getElementById('modal-title').textContent = `Edit ${variableName}`;
+        valueInput.value = currentValue;
+
+        modal.classList.add('active');
+
+        // Update the Save button's action dynamically
+        document.getElementById('save-variable').onclick = function() {
+            saveVariable(variableName, valueInput.value);
+        };
+    }
+
+    // Function to close the modal
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        modal.classList.remove('active');
+    }
+
+    // Function to save the variable
+    function saveVariable(variableName, value) {
+        const userId = '<%= req.user.userId %>';
+        const instanceId = '<%= instance.Id %>';
+        fetch(`/instances/startup/changevariable/${instanceId}?variable=${encodeURIComponent(variableName)}&value=${encodeURIComponent(value)}&user=${encodeURIComponent(userId)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(response => response.json())
+          .then(data => {
+              if (data.success) {
+                  alert('Variable updated successfully');
+              } else {
+                  alert('Failed to update variable');
+              }
+          });
+    }
+
+    // Add event listeners to all "Edit" buttons
+    document.querySelectorAll('.edit-variable').forEach(button => {
+        button.addEventListener('click', function() {
+            const variableName = this.getAttribute('data-variable-name');
+            const variableValue = this.getAttribute('data-variable-value');
+            openEditModal(variableName, variableValue);
+        });
+    });
+</script>
+    
+<%- include('../components/footer') %>

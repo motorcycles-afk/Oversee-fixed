@@ -1,0 +1,139 @@
+<%- include('../components/template') %>
+<main id="content" class="p-6">
+  <div class="bg-transparent">
+    <div class="flex justify-between items-center px-6 pt-4">
+      <div>
+        <h1 class="text-lg font-semibold text-white"><%= req.translations.users %></h1>
+        <p class="mt-1 text-sm text-gray-400">
+          <%= req.translations.usersDescription %>
+        </p>
+      </div>
+      <button id="createButton" class="bg-blue-600 hover:bg-blue-500 text-white py-2 px-4 rounded-lg shadow-md transition">
+        <%= req.translations.createUserButton %>
+      </button>
+    </div>
+
+    <div id="nodeTable" class="mt-6 w-full overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead class="border-b text-white">
+          <tr>
+            <th class="py-2 px-4 font-medium"><%= req.translations.name %></th>
+            <th class="py-2 px-4 font-medium"><%= req.translations.email %></th>
+            <th class="py-2 px-4 font-medium"><%= req.translations.role %></th>
+            <th class="py-2 px-4 font-medium"><%= req.translations.verificationStatus %></th>
+            <th class="py-2 px-4 font-medium">IP Address</th>
+            <th class="py-2 px-4 font-medium text-right"><%= req.translations.actions %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% users.forEach(function(user) { %>
+          <tr class="border-b hover:bg-gray-800 transition">
+            <td class="py-3 px-4 text-white flex items-center gap-3">
+              <img class="h-8 w-8 rounded-full" src="https://api.dicebear.com/9.x/thumbs/svg?seed=<%= user.username %>" alt="" />
+              <%= user.username %>
+            </td>
+            <td class="py-3 px-4 text-gray-300"><%= user.email %></td>
+            <td class="py-3 px-4 text-gray-300"><%= user.admin ? req.translations.admin : req.translations.regularUserRole %></td>
+            <td class="py-3 px-4 text-gray-300">
+              <span class="px-2 py-1 text-sm font-medium rounded-lg" 
+                style="background-color: <%= user.verified ? 'green' : 'red' %>; color: white;">
+                <%= user.verified ? req.translations.verifiedStatus : req.translations.unverifiedStatus %>
+              </span>
+            </td>
+            <td class="py-3 px-4 text-gray-300 ip-address">
+              <% if (user.ip && user.ip !== 'Unknown') { %>
+                <span class="text-blue-400 cursor-pointer hover:text-blue-300 transition" title="<%= user.registrationDate ? new Date(user.registrationDate).toLocaleString() : 'No date' %>">
+                  <%= user.ip %>
+                </span>
+              <% } else { %>
+                <span class="text-gray-500">Unknown</span>
+              <% } %>
+            </td>
+            <td class="py-3 px-4 text-right flex gap-2 justify-end">
+              <a href="/admin/users/edit/<%= user.userId %>" class="bg-yellow-500 hover:bg-yellow-400 text-white py-2 px-3 rounded-lg text-sm">Edit</a>
+              <button class="bg-red-600 hover:bg-red-500 text-white py-2 px-3 rounded-lg text-sm removeButton" data-user-id="<%= user.userId %>">Remove</button>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="nodeForm" class="mt-6 px-6 w-full hidden">
+      <form class="bg-gray-900 p-6 rounded-lg">
+        <label class="block text-gray-300 text-sm">Username:</label>
+        <input id="userName" type="text" class="w-full mt-2 p-2 rounded bg-gray-800 text-white border border-gray-700" placeholder="Enter username" />
+        
+        <label class="block text-gray-300 text-sm mt-4">Email:</label>
+        <input id="email" type="email" class="w-full mt-2 p-2 rounded bg-gray-800 text-white border border-gray-700" placeholder="Enter email" />
+
+        <label class="block text-gray-300 text-sm mt-4">Password:</label>
+        <input id="userPass" type="password" class="w-full mt-2 p-2 rounded bg-gray-800 text-white border border-gray-700" placeholder="******" />
+        
+        <label class="block text-gray-300 text-sm mt-4">Role:</label>
+        <select id="userAdmin" class="w-full mt-2 p-2 rounded bg-gray-800 text-white border border-gray-700">
+          <option value="true">Admin</option>
+          <option value="false">User</option>
+        </select>
+        
+        <button id="createNodeBtn" type="button" class="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg">Create</button>
+      </form>
+    </div>
+  </div>
+</main>
+
+<script>
+  document.getElementById("createButton").addEventListener("click", function () {
+    document.getElementById("nodeTable").classList.toggle("hidden");
+    document.getElementById("nodeForm").classList.toggle("hidden");
+  });
+  
+  document.getElementById("createNodeBtn").addEventListener("click", function () {
+    const username = document.getElementById("userName").value;
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("userPass").value;
+    const admin = document.getElementById("userAdmin").value === "true";
+
+    fetch("/users/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, email, password, admin, verified: false })
+    })
+    .then(response => response.ok ? response.json() : Promise.reject("Failed to create user"))
+    .then(() => {
+      alert("User created successfully");
+      window.location.reload();
+    })
+    .catch(error => alert("Error: " + error));
+  });
+
+  document.querySelectorAll(".removeButton").forEach(button => {
+    button.addEventListener("click", function () {
+      const userId = this.dataset.userId;
+      if (!confirm("Are you sure you want to remove this user?")) return;
+
+      fetch("/user/delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId })
+      })
+      .then(response => response.ok ? window.location.reload() : Promise.reject("Failed to delete user"))
+      .catch(error => alert("Error: " + error));
+    });
+  });
+  
+  // Add tooltip for IP addresses with registration date
+  document.querySelectorAll('.ip-address span[title]').forEach(el => {
+    el.addEventListener('click', function() {
+      navigator.clipboard.writeText(this.textContent.trim())
+        .then(() => {
+          alert('IP address copied to clipboard');
+        })
+        .catch(err => {
+          console.error('Failed to copy: ', err);
+        });
+    });
+  });
+</script>
+
+<%- include('../components/footer') %>

@@ -1,0 +1,819 @@
+<%- include('../components/template') %>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.min.js"
+    integrity="sha512-2PRgAav8Os8vLcOAh1gSaDoNLe1fAyq8/G3QSdyjFFD+OqNjLeHE/8q4+S4MEZgPsuo+itHopj+hJvqS8XUQ8A=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.min.css"
+    integrity="sha512-iLYuqv+v/P4u9erpk+KM83Ioe/l7SEmr7wB6g+Kg1qmEit8EShDKnKtLHlv2QXUp7GGJhmqDI+1PhJYLTsfb8w=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/addons/attach/attach.min.js"
+    integrity="sha512-43J76SR5UijcuJTzs73z8NpkyWon8a8EoV+dX6obqXW7O26Yb268H2vP6EiJjD7sWXqxS3G/YOqPyyLF9fmqgA=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/addons/fit/fit.min.js"
+    integrity="sha512-+wh8VA1djpWk3Dj9/IJDu6Ufi4vVQ0zxLv9Vmfo70AbmYFJm0z3NLnV98vdRKBdPDV4Kwpi7EZdr8mDY9L8JIA=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+<style>
+    canvas {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    .xterm-viewport {
+        overflow-y: hidden !important;
+    }
+</style>
+<script>
+    function showAlert(type, title, message) {
+    const alertContainer = document.getElementById('alert-container');
+    const alertElement = document.createElement('div');
+    alertElement.className = `p-4 rounded-2xl ${type === 'error' ? 'bg-red-600 text-white' : 'bg-emerald-500 text-white'} fade-in`;
+    alertElement.innerHTML = `
+        <div class="flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+            </svg>
+            <h3 class="text-lg font-medium">${title}</h3>
+        </div>
+        <p class="mt-2 text-sm">${message}</p>
+    `;
+    alertContainer.appendChild(alertElement);
+    setTimeout(() => {
+        alertElement.classList.add('fade-out');
+        setTimeout(() => alertContainer.removeChild(alertElement), 500);
+    }, 5000);
+}
+const eulaPopupHTML = `
+        <div id="eula-popup" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+          <div class="bg-[#1b1d21] p-10 rounded-2xl shadow-xl max-w-md w-full">
+            <h2 class="text-xl font-bold mb-4 text-white heavy">Minecraft EULA Agreement</h2>
+            <p class="text-gray-300 mb-6">You need to agree to the Minecraft End User License Agreement (EULA) to run this server.</p>
+            <div class="flex justify-end space-x-2.5">
+              <button id="decline-eula" class="px-4 py-2 bg-red-600 text-white rounded-l-xl rounded-r-lg hover:bg-red-700 transition-colors">Decline</button>
+              <button id="accept-eula" class="px-4 py-2 bg-emerald-600 text-white rounded-r-xl rounded-l-lg hover:bg-emerald-700 transition-colors">Accept</button>
+            </div>
+          </div>
+        </div>
+    `;
+
+    // Append the EULA popup HTML to the body
+    document.body.insertAdjacentHTML('beforeend', eulaPopupHTML);
+
+    // Function to show the EULA popup
+    function showEulaPopup() {
+        const popup = document.getElementById('eula-popup');
+        popup.classList.remove('hidden');
+        popup.classList.add('flex');
+    }
+
+    function hideEulaPopup() {
+        const popup = document.getElementById('eula-popup');
+        popup.classList.add('hidden');
+        popup.classList.remove('flex');
+    }
+
+    document.getElementById('accept-eula').addEventListener('click', acceptEula);
+    document.getElementById('decline-eula').addEventListener('click', hideEulaPopup);
+
+    // Function to accept the EULA
+    async function acceptEula() {
+        const instanceId = "<%= req.params.id %>" || '';
+        try {
+            // Send a request to write "eula=true" to the server
+            await fetch(`/instance/<%= req.params.id %>/imagefeatures/eula`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain',
+                }
+            });
+
+            hideEulaPopup();
+            showAlert('success', 'EULA Accepted', 'The Minecraft EULA has been accepted, Please Start your server.');
+        } catch (error) {
+            console.error('Error accepting EULA:', error);
+            showAlert('error', 'EULA Acceptance Failed', 'An error occurred while accepting the EULA. Please try again.');
+        }
+    }
+</script>
+
+<main class="flex-grow container mx-auto px-4 py-8 transition-all">
+    <%- include('../components/instance') %>
+    <% if (Array.isArray(files) && files.length > 0 && !files.some(file => file.name === 'eula.txt')) { %>
+        <% if (instance.imageData.features && instance.imageData.features.includes('eula')) { %>
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    // Show the EULA popup if required
+                    showEulaPopup();
+                });
+            </script>
+        <% } %>
+    <% } %>
+    
+
+    <% if (instance.Image == "ghcr.io/hydrenoffical/hydravm:latest") { %>
+      <div id="alert-container" class="mb-4 p-4 rounded-2xl bg-blue-600 text-white space-y-2 fade-in">
+        <div class="flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+            </svg>
+            <h3 class="text-lg font-medium">Ubuntu 22.04 VM</h3>
+        </div>
+        <p class="mt-2 text-sm">Your Running Ubuntu 22.04 Password Should be <code>root</code>, Reports the bugs at discord server</p>
+      </div>
+<% } else { %>
+    <% } %>
+      <div id="alert-container" class="mb-4 space-y-2"></div>    
+      <div class="flex space-x-2 mb-4">
+        
+    </div>
+    <!--div class="card rounded-xl p-4">
+        <div class="flex items-center justify-between mb-2">
+            <h2 class="text-lg font-semibold text-white heavy"><%= instance.Name %></h2>
+        </div>
+        <div class="space-y-2 text-sm">
+    <div class="flex items-center text-gray-400">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-4 w-4 mr-2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 0 6h13.5a3 3 0 1 0 0-6m-16.5-3a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3m-19.5 0a4.5 4.5 0 0 1 .9-2.7L5.737 5.1a3.375 3.375 0 0 1 2.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 0 1 .9 2.7m0 0a3 3 0 0 1-3 3m0 3h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Zm-3 6h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Z" />
+        </svg>
+        <span><%= instance.Node.name %></span>
+    </div>
+            <div class="flex items-center text-gray-400">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-4 w-4 mr-2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" />
+    </svg>
+    
+                <span><%= instance.Node.address %>:<%= instance.Primary %></span>
+            </div>
+            <button id="startButton" onclick="powerAction('start')" class="heavy h-12 w-12 hover:scale-95 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed" title="Start Server">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 mx-auto">
+                    <path fill-rule="evenodd" d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" />
+                </svg>
+            </button>
+            <button id="restartButton" onclick="powerAction('restart')" class="heavy h-12 w-12 hover:scale-95 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed" title="Restart Server">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 mx-auto">
+                    <path fill-rule="evenodd" d="M4.755 10.059a7.5 7.5 0 0 1 12.548-3.364l1.903 1.903h-3.183a.75.75 0 1 0 0 1.5h4.992a.75.75 0 0 0 .75-.75V4.356a.75.75 0 0 0-1.5 0v3.18l-1.9-1.9A9 9 0 0 0 3.306 9.67a.75.75 0 1 0 1.45.388Zm15.408 3.352a.75.75 0 0 0-.919.53 7.5 7.5 0 0 1-12.548 3.364l-1.902-1.903h3.183a.75.75 0 0 0 0-1.5H2.984a.75.75 0 0 0-.75.75v4.992a.75.75 0 0 0 1.5 0v-3.18l1.9 1.9a9 9 0 0 0 15.059-4.035.75.75 0 0 0-.53-.918Z" clip-rule="evenodd" />
+                </svg>
+            </button>
+            <button id="stopButton" onclick="powerAction('stop')" class="heavy h-12 w-12 hover:scale-95 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed" title="Stop Server">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 mx-auto">
+                    <path fill-rule="evenodd" d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z" clip-rule="evenodd" />
+                </svg>
+            </button>
+            <div onclick="window.location.href='/instance/<%= req.params.id %>/startup'" style="font-family: 'Inter'; width: 6.5rem;" class=" h-12 hover:bg-white/10 hover:scale-95 cursor-pointer bg-white/5 transition rounded-lg flex pt-4 justify-center p-1 text-xs">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4 text-white/50 inline-flex mr-0.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12a7.5 7.5 0 0 0 15 0m-15 0a7.5 7.5 0 1 1 15 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077 1.41-.513m14.095-5.13 1.41-.513M5.106 17.785l1.15-.964m11.49-9.642 1.149-.964M7.501 19.795l.75-1.3m7.5-12.99.75-1.3m-6.063 16.658.26-1.477m2.605-14.772.26-1.477m0 17.726-.26-1.477M10.698 4.614l-.26-1.477M16.5 19.794l-.75-1.299M7.5 4.205 12 12m6.894 5.785-1.149-.964M6.256 7.178l-1.15-.964m15.352 8.864-1.41-.513M4.954 9.435l-1.41-.514M12.002 12l-3.75 6.495" />
+        </svg>
+        Settings
+            </div>
+        </div>
+    </div-->
+
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div class="lg:col-span-3 space-y-6">
+            <div class="bg-white/5 card rounded-xl p-6">
+                <h2 class="text-lg font-semibold heavy">Console</h2>
+                <span class="text-gray-300 text-sm mt-1 mb-4">Send commands to your server, view important logs and more.</span>
+<div class="border-t border-white/5 mt-4"></div>
+                <div id="terminal" class="bg-black/20 p-4 rounded-xl border border-white/5 shadow-sm scrollbar-hide overflow-x-auto mb-4">
+                </div>
+                <div class="flex items-center gap-4 border-t border-white/5 pt-4">
+                    <!-- Input Field -->
+                    <input type="text" 
+                           id="console-input" 
+                           class="flex-grow p-3 bg-white/10 border border-white/10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white rounded-lg placeholder-gray-400" 
+                           placeholder="Enter a command" 
+                           required>
+                
+                    <!-- Send Command Button -->
+                    <button onclick="sendCommand()" 
+                            class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-5 rounded-lg transition duration-300">
+                        <span>Send Command</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" 
+                             fill="none" 
+                             viewBox="0 0 24 24" 
+                             stroke-width="1.5" 
+                             stroke="currentColor" 
+                             class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5L15.75 12 8.25 19.5" />
+                        </svg>
+                    </button>
+                </div>
+                
+        <br>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    
+                   <!-- CPU Usage Container -->
+<div id="cpuUsageContainer" class="bg-white/5 rounded-lg p-6">
+    <h3 class="text-sm font-semibold mb-2 text-white/60"><%= req.translations.cpuUsage %></h3>
+    <div class="flex items-center">
+        <span id="cpuUsage" class="text-sm font-medium"></span>
+    </div>
+</div>
+
+<!-- Disk Usage Container -->
+<div id="diskUsageContainer" class="bg-white/5 rounded-lg p-6">
+    <h3 class="text-sm font-semibold mb-2 text-white/60"><%= req.translations.diskUsage %></h3>
+    <div class="flex items-center">
+        <span id="diskUsage" class="text-sm font-medium"></span>
+    </div>
+</div>
+
+                    <div id="ramUsageContainer" class="bg-white/5 rounded-lg p-6">
+                        
+                        <h3 class="text-sm font-semibold mb-2 text-white/60"><%= req.translations.ramUsage %></h3>
+                        <div class="flex items-center">
+                            <span id="ramUsage" class="text-sm font-medium"></span>
+                        </div>
+                    </div>                    
+                   
+                    </div>
+
+                    
+                </div>
+        </div>
+                        <div class="bg-white/5 card rounded-xl p-6">
+                            <div>
+                                <div class="flex space-x-2 mb-4">
+                                    <button id="startButton" class="heavy h-12 w-12 hover:scale-95 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed" title="Start Server">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 mx-auto">
+                                            <path fill-rule="evenodd" d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                    <button id="restartButton" class="heavy h-12 w-12 hover:scale-95 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed" title="Restart Server">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 mx-auto">
+                                            <path fill-rule="evenodd" d="M4.755 10.059a7.5 7.5 0 0 1 12.548-3.364l1.903 1.903h-3.183a.75.75 0 1 0 0 1.5h4.992a.75.75 0 0 0 .75-.75V4.356a.75.75 0 0 0-1.5 0v3.18l-1.9-1.9A9 9 0 0 0 3.306 9.67a.75.75 0 1 0 1.45.388Zm15.408 3.352a.75.75 0 0 0-.919.53 7.5 7.5 0 0 1-12.548 3.364l-1.902-1.903h3.183a.75.75 0 0 0 0-1.5H2.984a.75.75 0 0 0-.75.75v4.992a.75.75 0 0 0 1.5 0v-3.18l1.9 1.9a9 9 0 0 0 15.059-4.035.75.75 0 0 0-.53-.918Z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                    <button id="stopButton" class="heavy h-12 w-12 hover:scale-95 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed" title="Stop Server">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 mx-auto">
+                                            <path fill-rule="evenodd" d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                    <div onclick="window.location.href='/instance/<%= req.params.id %>/startup'" style="font-family: 'Inter'; width: 6.5rem;" class=" h-12 hover:bg-white/10 hover:scale-95 cursor-pointer bg-white/5 transition rounded-lg flex pt-4 justify-center p-1 text-xs">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4 text-white/50 inline-flex mr-0.5">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12a7.5 7.5 0 0 0 15 0m-15 0a7.5 7.5 0 1 1 15 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077 1.41-.513m14.095-5.13 1.41-.513M5.106 17.785l1.15-.964m11.49-9.642 1.149-.964M7.501 19.795l.75-1.3m7.5-12.99.75-1.3m-6.063 16.658.26-1.477m2.605-14.772.26-1.477m0 17.726-.26-1.477M10.698 4.614l-.26-1.477M16.5 19.794l-.75-1.299M7.5 4.205 12 12m6.894 5.785-1.149-.964M6.256 7.178l-1.15-.964m15.352 8.864-1.41-.513M4.954 9.435l-1.41-.514M12.002 12l-3.75 6.495" />
+                                </svg>
+                                Settings
+                                    </div>
+                                </div>
+                                </div>
+                            <div class="flex items-center justify-between mb-2">
+                                <h2 class="text-lg font-semibold text-white heavy" id="server-name-card"><%= instance.Name %></h2>
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                
+                        <div class="flex items-center text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-4 w-4 mr-2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 0 6h13.5a3 3 0 1 0 0-6m-16.5-3a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3m-19.5 0a4.5 4.5 0 0 1 .9-2.7L5.737 5.1a3.375 3.375 0 0 1 2.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 0 1 .9 2.7m0 0a3 3 0 0 1-3 3m0 3h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Zm-3 6h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Z" />
+                            </svg>
+                            <span id="node"><%= instance.Node.name %></span>
+                           
+                        </div>
+                        <div class="flex items-center text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m7.875 14.25 1.214 1.942a2.25 2.25 0 0 0 1.908 1.058h2.006c.776 0 1.497-.4 1.908-1.058l1.214-1.942M2.41 9h4.636a2.25 2.25 0 0 1 1.872 1.002l.164.246a2.25 2.25 0 0 0 1.872 1.002h2.092a2.25 2.25 0 0 0 1.872-1.002l.164-.246A2.25 2.25 0 0 1 16.954 9h4.636M2.41 9a2.25 2.25 0 0 0-.16.832V12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 12V9.832c0-.287-.055-.57-.16-.832M2.41 9a2.25 2.25 0 0 1 .382-.632l3.285-3.832a2.25 2.25 0 0 1 1.708-.786h8.43c.657 0 1.281.287 1.709.786l3.284 3.832c.163.19.291.404.382.632M4.5 20.25h15A2.25 2.25 0 0 0 21.75 18v-2.625c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125V18a2.25 2.25 0 0 0 2.25 2.25Z" />
+                          </svg>
+                          <p id="status" class="text-red-500 font-extrabold w-2">.Offline</p>
+                           
+                        </div>
+                                <div class="flex items-center text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-4 w-4 mr-2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" />
+                        </svg>
+                        
+                                    <span id="ip"><%= instance.Node.address %>:<%= instance.Primary %></span>
+                                </div>
+                            </div>
+                            <br>
+                            <% if (instance.Image == "ghcr.io/hydren-dev/yolks:java") { %>
+                                <div class="card bg-white/5 rounded-xl p-6">
+                                    <input type="text" id="playername" class="w-full p-2 mb-4 bg-white/5 border border-white/5 focus:ring-2 focus:ring-indigo-500 focus:border-white/5 text-white rounded-lg" placeholder="Player Name" required>
+                                
+                                    <div class="flex flex-col space-y-2">
+                                        <button onclick="playeraction('ban')" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm transition hover:scale-95">
+                                            Ban
+                                        </button>
+                                        <button onclick="playeraction('unban')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm transition hover:scale-95">
+                                            UnBan
+                                        </button>
+                                        <button onclick="playeraction('kick')" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1.5 rounded-lg text-sm transition hover:scale-95">
+                                            Kick
+                                        </button>
+                                        <button onclick="playeraction('op')" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm transition hover:scale-95">
+                                            Op
+                                        </button>
+                                        <button onclick="playeraction('deop')" class="bg-red-400 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm transition hover:scale-95">
+                                            Deop
+                                        </button>
+                                    </div>
+                                </div>
+                                <br>
+                                <div class="card bg-white/5 rounded-xl p-6">                                
+                                    <div class="flex flex-col space-y-2">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <h2 class="text-lg font-semibold text-white" id="server-name-card">Server Properties</h2>
+                                        </div>
+                                        
+                                        <!-- Warning Message -->
+                                        <div class="bg-yellow-500 text-black p-3 rounded-lg border border-yellow-600 mb-4">
+                                            <p class="text-sm">
+                                                <strong>Warning:</strong> This will Resetting the <code>server.properties</code> file will revert all custom configurations to default. Please ensure you have backed up any important settings before proceeding.
+                                            </p>
+                                        </div>
+                                        
+                                        <button onclick="enableCrack()" class="bg-emerald-400 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm transition hover:scale-95">
+                                            Enable Cracked
+                                        </button>
+                                        <script>
+                                            function enableCrack() {
+                                                const id = "<%= req.params.id %>"
+                                                showAlert('success', 'Enabled Cracked', 'You have successfully enabled the cracked feature. Please restart or start your server to take effect.');
+                                                setTimeout(() => {
+                                                     window.location.href = `/instance/${id}/imagefeatures/cracked`;
+                                                     }, 1700);
+                                              }
+                                        </script>
+                                    </div>
+                                </div>
+                                
+                                <% } else { %>
+                                    <% } %>
+                        </div>
+                       
+                        </div>
+                        <% if (req.query.settings === 'success' && req.query.cracked) { %>
+                            <script>
+                              showAlert('success', 'Enabled Cracked', 'You have successfully enabled the cracked feature. Please restart or start your server to take effect.');
+                            </script>
+                          <% } %>  
+                        <script>
+                           ['start', 'stop', 'restart'].forEach(action => {
+                           document.getElementById(`${action}Button`).addEventListener('click', function () {
+                               if (ws) {
+                                   // Check if the action is 'stop'
+                                   if (action === 'stop') {
+                                       ws.send(JSON.stringify({
+                                           event: 'cmd',
+                                           command: 'stop',
+                                           containerId: instanceId // Replace with your actual instanceId variable
+                                       }));
+                                   } else {
+                                       ws.send(JSON.stringify({
+                                           event: `power:${action}`,
+                                           containerId: instanceId
+                                       }));
+                                   }
+                       
+                                   showAlert('success', 'Action Executed', `Server is ${action}ing. Please wait for a while or refresh the page.`);
+                                   ws.close();
+                               }
+                       
+                               const friendlyMessages = {
+                                   "Checking server disk space usage, this could take a few seconds...": 
+                                       "\u001b[1m\u001b[33m > [OverSee]\x1b[0m Performing container disk usage checks...",
+                                   "Updating process configuration files...": 
+                                       "\u001b[1m\u001b[33m > [OverSee]\x1b[0m Updating environment...",
+                                   "Ensuring file permissions are set correctly, this could take a few seconds...": 
+                                       "\u001b[1m\u001b[33m > [OverSee]\x1b[0m Performing file permission checks...",
+                                   "Pulling Docker container image, this could take a few minutes to complete...": 
+                                       "\u001b[1m\u001b[33m > [OverSee]\x1b[0m Fetching Docker image...",
+                                   "Finished pulling Docker container image": 
+                                       "\u001b[1m\u001b[33m > [OverSee]\x1b[0m Completed Docker image pull!"
+                               };
+
+                                if (action === 'start') {
+                                    term.clear();
+                                    logToTerminal(friendlyMessages);
+                                }
+                            });
+                        });
+
+        
+                        
+                            // Log the friendly messages to the terminal
+                            function logToTerminal(messages) {
+                                for (let message in messages) {
+                                    term.write(messages[message] + '\r\n');
+                                }
+                            }
+                        
+                            
+                        </script>
+                        
+                         <script>
+                            function playeraction(action) {
+                            const instanceId = '<%= req.params.id %>';  // Get the instance ID dynamically from your server-side templating (EJS)
+                            const playernameaction = document.getElementById('playername').value;
+                        
+                            ws.send(JSON.stringify({
+                                event: 'cmd',
+                                command: `${action} ${playernameaction}`,
+                                containerId: instanceId
+                            }));
+
+                            showAlert('success', 'Action Executed', `Player ${playernameaction} have been ${action}`)
+                        }
+                        </script>
+</main>
+<style>
+    .console-line {
+    padding: 4px 6px;
+    margin: 1px 0;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .console-line:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  .console-line-content {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .console-line-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+    font-size: 0.7rem;
+  }
+  .console-line:hover .console-line-info {
+    opacity: 1;
+  }
+</style>
+    <script>
+        function smoothScrollConsole() {
+            const consoleOutput = document.getElementById('terminal');
+            consoleOutput.scrollTo({
+                top: consoleOutput.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+        const baseTheme = {
+            foreground: '#c5c9d1',
+            background: 'rgba(0 0 0 / 0)',
+            selection: '#5DA5D533',
+            black: '#1E1E1D',
+            brightBlack: '#262625',
+            red: '#E54B4B',
+            green: '#9ECE58',
+            yellow: '#FAED70',
+            blue: '#396FE2',
+            magenta: '#BB80B3',
+            cyan: '#2DDAFD',
+            white: '#d0d0d0',
+            brightBlack: 'rgba(255, 255, 255, 0.2)',
+            brightRed: '#FF5370',
+            brightGreen: '#C3E88D',
+            brightYellow: '#FFCB6B',
+            brightBlue: '#82AAFF',
+            brightMagenta: '#C792EA',
+            brightCyan: '#89DDFF',
+            brightWhite: '#ffffff',
+        };
+        
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const instanceId = '<%= req.params.id %>';
+        const maxCommands = 10;
+        let commandHistory = [];
+        let currentCommandIndex = -1;
+        let term;
+        let ws;
+        
+        function initWebSocket() {
+            const port = window.location.port ? `:${window.location.port}` : '';
+            ws = new WebSocket(`${protocol}://${window.location.hostname}${port}/console/${instanceId}`);
+            
+            ws.onopen = () => console.log('WebSocket connected!');
+            ws.onmessage = handleWebSocketMessage;
+            ws.onclose = () => {
+                console.log('WebSocket connection closed, attempting to reconnect...');
+                showAlert('error', 'Connection Lost', 'Unable to Connect to WebSocket Please check your internet')
+                setTimeout(initWebSocket, 3000);
+            };
+            ws.onerror = (error) => {
+                console.log('WebSocket encountered an error:', error, 'Attempting to reconnect...');
+                showAlert('error', 'Connection Lost', 'Unable to Connect to WebSocket Please check your internet')
+                setTimeout(initWebSocket, 5000);
+            };
+        }
+        
+        function handleWebSocketMessage(msg) {
+            const lines = msg.data.split('\n');
+            let isFirstLine = true;
+            let previousLineWasEmpty = false;
+        
+            lines.forEach(line => {
+                const trimmedLine = line.trim();
+                if (trimmedLine === '' && previousLineWasEmpty) return;
+                
+                if (!isFirstLine && !previousLineWasEmpty) {
+                    term.write('\r\n');
+                }
+        
+                term.write('\x1b[0m' + trimmedLine);
+        
+                if (trimmedLine.includes("state:")) {
+                    term.write('\r\n\u001b[1m\u001b[33m[PANEL] \u001b[0mreconnecting socket, hold on...\r\n');
+                    term.clear();
+                    ws.close();
+                }
+                const instancestartedmessage = "<%= instance.imageData.StartedMessage %>" || 'For help, type "help"';
+                if (trimmedLine.includes(instancestartedmessage)) {
+                term.write('\n\u001b[1m\u001b[33mcontainer@hydra~ \u001b[0mServer marked as Started\r\n');
+            }
+
+                if (trimmedLine.replace(/^\[\d{2}:\d{2}:\d{2} WARN\]: /, '').includes("Failed to load eula.txt")) {
+                   showEulaPopup();
+               }
+
+        
+                let alertShown = false; // Flag to track if the alert has been shown
+               
+               if (trimmedLine.includes("HydraDaemon instance appears to be down")) {
+                   if (!alertShown) {
+                       showAlert('error', 'Node Connection Failed', 'Unable to establish a connection with the node. Please check the network or server status and try again.');
+                       alertShown = true; // Set the flag to true after showing the alert
+                   }
+                   ws.close();
+               } else {
+                  console.log('Node Connection Success!')
+               }
+
+              
+
+        
+                isFirstLine = false;
+                previousLineWasEmpty = (trimmedLine === '');
+            });
+        }
+           
+        function setupTerminal() {
+           term = new Terminal({
+               disableStdin: true,
+               allowProposedApi: true,
+               cursorStyle: 'underline',
+               rows: 20,
+               cols: 100,
+               fontFamily: 'Menlo, monospace',
+               theme: baseTheme,
+               allowTransparency: true,
+               fontSize: 12,
+               lineHeight: 1.0, // Standard line height
+           });
+
+    const terminalContainer = document.getElementById('terminal');
+    term.open(terminalContainer);
+
+    const originalWrite = term.write.bind(term);
+    term.write = (data) => {
+        // Split the data into lines
+        const lines = data.split(/\r?\n/);
+
+        // Check if the user is an admin by accessing the user status (this can be done in various ways depending on your setup)
+        const isAdmin = "<%= req.user.admin %>"; // Assuming this is set server-side in your template
+
+        // If the user is an admin, include "Unpacking" lines, else filter them out
+        const filteredData = lines
+            .filter(line => isAdmin || !line.includes("Unpacking")) // Show Unpacking only for admins
+            .join('\r\n'); // Rejoin the remaining lines
+
+        // Write the filtered data to the terminal
+        originalWrite(filteredData);
+    };
+}
+
+        
+        function sendCommand() {
+            const inputElement = document.getElementById('console-input');
+            const command = inputElement.value.trim();
+            if (command && ws) {
+                term.write('\u001b[1m\u001b[33m~ \u001b[0m' + command + '\r\n');
+                ws.send(JSON.stringify({
+                    event: 'cmd',
+                    command: command,
+                    containerId: instanceId
+                }));
+        
+                if (commandHistory.length === maxCommands) {
+                    commandHistory.shift();
+                }
+                commandHistory.push(command);
+                currentCommandIndex = commandHistory.length;
+        
+                inputElement.value = '';
+            }
+        }
+        
+        function handleKeyUp(event) {
+    const input = document.getElementById('console-input');
+    
+    if (event.key === 'ArrowUp') {
+        if (currentCommandIndex > 0) {
+            currentCommandIndex--;
+            input.value = commandHistory[currentCommandIndex];
+        }
+        event.preventDefault();
+    } else if (event.key === 'ArrowDown') {
+        if (currentCommandIndex < commandHistory.length - 1) {
+            currentCommandIndex++;
+            input.value = commandHistory[currentCommandIndex];
+        } else {
+            currentCommandIndex = commandHistory.length;
+            input.value = '';
+        }
+        event.preventDefault();
+    } else if (event.key === 'Enter') {
+        const command = input.value.trim();
+        if (command) {
+           sendCommand()
+        }
+        event.preventDefault(); // Prevent default "Enter" behavior
+    }
+}
+
+        
+        document.addEventListener('DOMContentLoaded', function () {
+            setupTerminal();
+            initWebSocket();
+        
+            const inputElement = document.getElementById('console-input');
+            inputElement.addEventListener('keypress', function (event) {
+                if (event.key === 'Enter') {
+                    sendCommand();
+                }
+            });
+        
+            inputElement.addEventListener('keydown', handleKeyUp);
+
+            initStatsWebSocket();
+        });
+        
+        function initStatsWebSocket() {
+            const statsWs = new WebSocket(`${protocol}://${window.location.hostname}:${window.location.port}/stats/${instanceId}`);
+            
+            statsWs.onmessage = event => {
+                const stats = JSON.parse(event.data);
+                console.log("Stats received (instance.ejs):", stats); // Log the stats object
+                if (stats.error) {
+                    console.error('Error fetching stats:', stats.error);
+                    return;
+                }
+        
+                updateRamUsage(stats);
+                updateCpuUsage(stats);
+                updateDiskUsage(stats);
+                updateStatus(stats); // Pass the whole stats object
+            };
+        }
+        
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+        
+        function createBackgroundChart(canvasId, type = 'line') {
+            return new Chart(document.getElementById(canvasId).getContext('2d'), {
+                type: type,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        fill: true,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false }
+                    },
+                    animation: false
+                }
+            });
+        }
+        
+        function updateRamUsage(stats) {
+    const ramStatsUsage = stats.memory_stats.usage || 0;
+    const ramStatsLimit = stats.memory_stats.limit || 0;
+
+    const ramUsageRaw = ramStatsUsage / 1024 / 1024 || 0; // Convert to MB
+    const ramLimitRaw = ramStatsLimit / 1024 / 1024 || 0; // Convert to MB
+    const ramUsagePercent = (ramLimitRaw > 0) ? ((ramUsageRaw / ramLimitRaw) * 100).toFixed(2) : '0.00';
+
+    // Update the text content for RAM usage
+    document.getElementById('ramUsage').textContent = `${ramUsagePercent}% (${formatBytes(ramStatsUsage)} / ${formatBytes(ramStatsLimit)})`;
+
+    // Select the container div
+    const ramUsageContainer = document.getElementById('ramUsageContainer');
+
+    // Remove the bg-white/5 class and add bg-red-500 if RAM usage exceeds 90%
+    if (ramUsagePercent >= 90) {
+        ramUsageContainer.classList.remove('bg-white/5');
+        ramUsageContainer.classList.add('bg-red-500');
+    } else {
+        ramUsageContainer.classList.remove('bg-red-500');
+        ramUsageContainer.classList.add('bg-white/5');
+    }
+}
+        
+     // Update CPU Usage
+function updateCpuUsage(stats) {
+    const cpuDelta = stats.cpu_stats.cpu_usage.total_usage - stats.precpu_stats.cpu_usage.total_usage;
+    const systemCpuDelta = stats.cpu_stats.system_cpu_usage - stats.precpu_stats.system_cpu_usage;
+    let cpuUsagePercent = ((cpuDelta / systemCpuDelta) * 100).toFixed(2);
+
+    if (isNaN(cpuUsagePercent)) {
+        cpuUsagePercent = 0;
+    }
+
+    // Update CPU usage text content
+    document.getElementById('cpuUsage').textContent = `${cpuUsagePercent}%`;
+
+    // Select the container div for CPU usage
+    const cpuUsageContainer = document.getElementById('cpuUsageContainer');
+
+    // Remove the bg-white/5 class and add bg-red-500 if CPU usage exceeds 90%
+    if (parseFloat(cpuUsagePercent) >= 90) {
+        cpuUsageContainer.classList.remove('bg-white/5');
+        cpuUsageContainer.classList.add('bg-red-500');
+    } else {
+        cpuUsageContainer.classList.remove('bg-red-500');
+        cpuUsageContainer.classList.add('bg-white/5');
+    }
+}
+
+// Update Disk Usage
+function updateDiskUsage(stats) {
+    const diskUsageRaw = parseFloat(stats.volumeSize); // in MB
+    const diskLimitRaw = 10 * 1024; // Assuming 10GB limit (in MB)
+    const diskUsagePercent = (diskUsageRaw / diskLimitRaw * 100).toFixed(2);
+
+    // Update disk usage text content
+    document.getElementById('diskUsage').textContent = `${diskUsagePercent}% (${formatBytes(diskUsageRaw * 1024 * 1024)} / ${formatBytes(diskLimitRaw * 1024 * 1024)})`;
+
+    // Select the container div for Disk usage
+    const diskUsageContainer = document.getElementById('diskUsageContainer');
+
+    // Remove the bg-white/5 class and add bg-red-500 if disk usage exceeds 90%
+    if (parseFloat(diskUsagePercent) >= 90) {
+        diskUsageContainer.classList.remove('bg-white/5');
+        diskUsageContainer.classList.add('bg-red-500');
+    } else {
+        diskUsageContainer.classList.remove('bg-red-500');
+        diskUsageContainer.classList.add('bg-white/5');
+    }
+}
+        
+        function updateStatus(stats) { // Receive full stats object
+            const statusElement = document.getElementById('status');
+            // Determine status based on stats.state if available, otherwise default/fallback
+            let statusText = '.Offline';
+            let statusClass = 'text-red-500'; // Default offline class
+
+            if (stats.state) {
+                if (stats.state === 'running') {
+                    statusText = '.Online';
+                    statusClass = 'text-emerald-500';
+                } else if (stats.state === 'starting') {
+                    statusText = '.Starting';
+                    statusClass = 'text-yellow-500 animate-pulse'; 
+                } else { // Assume stopped/offline for other states
+                    statusText = '.Offline';
+                    statusClass = 'text-red-500';
+                }
+            } else {
+                 // Fallback if stats.state is not present (optional: could keep default offline)
+                 const ramUsageRaw = stats.memory_stats?.usage / 1024 / 1024 || 0;
+                 if (ramUsageRaw > 1) { 
+                    statusText = '.Online';
+                    statusClass = 'text-emerald-500';
+                 } 
+            }
+            
+            statusElement.textContent = statusText;
+            statusElement.className = statusClass; // Update the class
+        }
+        
+    
+        </script>
+<%- include('../components/footer') %>

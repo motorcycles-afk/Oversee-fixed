@@ -1,0 +1,113 @@
+<%- include('components/template') %>
+<main class="container flex-grow px-6 py-10 mx-auto animate-fade-in">
+  <div class="flex items-center justify-between w-full pb-6 mx-auto">
+    <div class="flex flex-col">
+      <h1 class="text-2xl font-bold text-white">Instances</h1>
+      <p class="text-gray-400 text-md">Overview of your servers on <%= name %>.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <% if (req.user.admin) { %>
+        <div class="relative inline-block" x-data="{ open: false }">
+          <button @click="open = !open" class="flex items-center gap-2 px-6 py-2 text-white bg-indigo-600 rounded-lg shadow-md transition-all duration-200 hover:scale-95 hover:bg-indigo-800 focus:ring-2 focus:ring-indigo-800">
+            <span>Filter</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="size-4 transition-transform" :class="open ? 'rotate-180' : ''">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
+            </svg>
+          </button>
+          <div x-show="open" class="absolute right-0 w-48 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg transition-opacity duration-300" x-transition:enter="opacity-100" x-transition:leave="opacity-0">
+            <div class="py-2">
+              <a href="/instances<%= req.query.see === 'other' ? '' : '?see=other' %>" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700">
+                <%= req.query.see === 'other' ? 'Showing Your Instances' : 'See All Instances' %>
+              </a>
+            </div>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  </div>
+  
+  <div class="overflow-hidden shadow-lg ring-1 ring-gray-700 rounded-lg mb-12 animate-fade-in-up">
+    <table class="min-w-full divide-y divide-gray-700">
+      <thead class="bg-gray-800">
+        <tr>
+          <th class="py-4 pl-6 text-left text-sm font-semibold text-white">Server</th>
+          <th class="px-4 py-4 text-left text-sm font-semibold text-white">Status</th>
+          <th class="px-4 py-4 text-left text-sm font-semibold text-white">RAM Usage</th>
+          <th class="px-4 py-4 text-left text-sm font-semibold text-white">CPU Usage</th>
+          <th class="px-4 py-4 text-left text-sm font-semibold text-white">IP Address</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-700 bg-gray-900">
+        <% instances.forEach(instance => { %>
+          <tr onclick="window.location.href = '../instance/<%= instance.Id %>';" class="hover:bg-gray-800 cursor-pointer transition-transform hover:scale-[1.02]">
+            <td class="py-4 pl-6 text-sm font-medium text-white"><%= instance.Name %></td>
+            <td class="px-4 py-4 text-sm">
+              <span id="status_<%= instance.Id %>" class="px-3 py-1 text-xs font-bold text-white rounded-lg bg-gray-700 animate-pulse">Checking...</span>
+            </td>
+            <td class="px-4 py-4 text-sm text-gray-300">
+              <div class="relative w-32 h-3 bg-gray-700 rounded-md overflow-hidden">
+                <div id="ramUsageBar_<%= instance.Id %>" class="absolute top-0 left-0 h-full bg-green-500 transition-all duration-500 ease-in-out" style="width: 0%;"></div>
+              </div>
+              <span id="ramUsagetext_<%= instance.Id %>" class="text-xs text-gray-400">0%</span>
+            </td>
+            <td class="px-4 py-4 text-sm text-gray-300">
+              <div class="relative w-32 h-3 bg-gray-700 rounded-md overflow-hidden">
+                <div id="cpuUsageBar_<%= instance.Id %>" class="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-500 ease-in-out" style="width: 0%;"></div>
+              </div>
+              <span id="cpuUsagetext_<%= instance.Id %>" class="text-xs text-gray-400">0%</span>
+            </td>
+            <td class="px-4 py-4 text-sm text-gray-300">
+              <span class="px-3 py-1 text-xs font-medium text-gray-200 bg-gray-700 rounded-lg"><%= instance.Node.address %>:<%= instance.Primary %></span>
+            </td>
+          </tr>
+          <script>
+            function updateInstanceStatus(instanceId, status) {
+              const statusElement = document.getElementById(`status_${instanceId}`);
+              statusElement.textContent = status;
+              let statusClass = 'bg-gray-700 text-white';
+              if (status === 'Online' || status === 'running') {
+                  statusClass = 'bg-green-500 text-white';
+              } else if (status === 'Offline' || status === 'stopped') {
+                  statusClass = 'bg-red-500 text-white';
+              } else if (status === 'starting') {
+                  statusClass = 'bg-yellow-500 text-black animate-pulse';
+              }
+              statusElement.className = `px-3 py-1 text-xs font-bold rounded-lg ${statusClass}`;
+            }
+            function updateUsageBars(instanceId, ramUsage, cpuUsage) {
+              document.getElementById(`ramUsageBar_${instanceId}`).style.width = `${ramUsage}%`;
+              document.getElementById(`ramUsagetext_${instanceId}`).textContent = `${ramUsage}%`;
+              document.getElementById(`cpuUsageBar_${instanceId}`).style.width = `${cpuUsage}%`;
+              document.getElementById(`cpuUsagetext_${instanceId}`).textContent = `${cpuUsage}%`;
+            }
+            function initStatsWebSocket(instanceId) {
+              const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+              const statsWs = new WebSocket(`${protocol}://${window.location.hostname}:${window.location.port}/stats/${instanceId}`);
+              statsWs.onmessage = event => {
+                try {
+                  const stats = JSON.parse(event.data);
+                  console.log("Stats received (instances.ejs):", stats);
+                  const ramUsage = stats.memory_stats?.limit ? ((stats.memory_stats.usage / stats.memory_stats.limit) * 100).toFixed(2) : 0;
+                  const cpuUsage = stats.cpu_stats?.system_cpu_usage ? ((stats.cpu_stats.cpu_usage.total_usage / stats.cpu_stats.system_cpu_usage) * 100).toFixed(2) : 0;
+                  updateUsageBars(instanceId, ramUsage, cpuUsage);
+                  let status = 'Offline';
+                  if (stats.state) {
+                      status = stats.state === 'running' ? 'Online' : 'Offline';
+                  } else if (ramUsage > 1) {
+                     status = 'Online';
+                  }
+                  updateInstanceStatus(instanceId, status);
+                } catch (e) {
+                  console.error('Invalid stats data:', event.data, e);
+                }
+              };
+              statsWs.onerror = error => console.error('WebSocket error:', error);
+              statsWs.onclose = () => setTimeout(() => initStatsWebSocket(instanceId), 3000);
+            }
+            initStatsWebSocket('<%= instance.Id %>');
+          </script>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</main>

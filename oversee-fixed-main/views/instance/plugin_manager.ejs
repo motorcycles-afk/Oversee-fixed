@@ -1,0 +1,728 @@
+
+<%- include('../components/template') %>
+<style>
+  .select-all-checkbox {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem;
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 0.5rem;
+      margin-right: 1rem;
+  }
+
+  .file-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+  
+  .select-all-checkbox input[type="checkbox"] {
+      margin-right: 0.5rem;
+  }
+  
+  .select-all-label {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.875rem;
+      user-select: none;
+  }
+  /* Existing styles */
+  @media (max-width: 640px) {
+      .file-manager-header {
+          flex-direction: column;
+          align-items: stretch;
+      }
+      .file-manager-title {
+          margin-bottom: 1rem;
+      }
+      .file-manager-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+      }
+      .file-manager-actions button {
+          flex: 1;
+          white-space: nowrap;
+      }
+      .breadcrumb {
+          flex-wrap: wrap;
+      }
+      .file-list-item {
+          flex-wrap: wrap;
+          padding: 0.5rem;
+      }
+      .file-info {
+          width: 100%;
+          margin-top: 0.5rem;
+          justify-content: space-between;
+      }
+      .drop-zone {
+          padding: 1rem;
+      }
+  }
+  .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+  .modal-content {
+      background-color: #1a1c20;
+      padding: 2rem;
+      border-radius: 0.5rem;
+      max-width: 90%;
+      max-height: 90%;
+      overflow: auto;
+      transform: scale(0.9);
+      opacity: 0;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+  .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+  }
+  .modal-overlay.active .modal-content {
+      transform: scale(1);
+      opacity: 1;
+  }
+  
+  /* New styles for smoother transitions and better UX */
+  .file-list-item {
+      transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+  .file-list-item:hover {
+      transform: translateY(-2px);
+  }
+  .file-list-item:active {
+      transform: translateY(0);
+  }
+  .action-button {
+      transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+  .action-button:hover {
+      transform: translateY(-2px);
+  }
+  .action-button:active {
+      transform: translateY(0);
+  }
+  .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+  .loading-overlay.active {
+      opacity: 1;
+      visibility: visible;
+  }
+  .spinner {
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top: 4px solid #ffffff;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+  }
+ 
+  .file-card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+  .file-card .context-menu-button {
+      opacity: 0;
+      transition: opacity 0.2s ease-in-out;
+  }
+  .file-card:hover .context-menu-button {
+      opacity: 1;
+  }
+  #mass-actions-bar {
+      transition: all 0.3s ease-in-out;
+  }
+  .file-card input[type="checkbox"] {
+      opacity: 0;
+      transition: opacity 0.2s ease-in-out;
+  }
+  .file-card:hover input[type="checkbox"],
+  .file-card input[type="checkbox"]:checked {
+      opacity: 1;
+  }
+  .file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Auto adjust columns based on screen width */
+    gap: 1rem; /* Space between items */
+    padding: 1rem; /* Optional: Add padding around the grid container */
+}
+
+.file-grid > a, .file-grid > button {
+    display: flex;
+    flex-direction: row; /* Arrange icon, name, and size horizontally */
+    align-items: center; /* Vertically center the items in the row */
+    justify-content: space-between; /* Spread items across the row */
+    text-align: left; /* Left align text */
+    padding: 1rem; /* Padding inside each file/directory item */
+    background-color: rgba(255, 255, 255, 0.05); /* Background color for items */
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Border for items */
+    border-radius: 8px; /* Rounded corners for items */
+    transition: background-color 0.3s ease, transform 0.3s ease; /* Smooth transition on hover */
+}
+
+.file-grid > a:hover, .file-grid > button:hover {
+    background-color: rgba(255, 255, 255, 0.1); /* Change background on hover */
+    transform: scale(1.05); /* Slightly scale the item on hover */
+}
+
+.file-icon {
+    margin-right: 0.75rem; /* Space between the icon and the name */
+}
+
+.file-name {
+    font-size: 1rem;
+    font-weight: 500;
+    color: white;
+    white-space: nowrap; /* Prevent text from wrapping */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Add ellipsis if text overflows */
+}
+
+.file-size {
+    font-size: 0.875rem; /* Smaller font size for file size */
+    color: rgba(255, 255, 255, 0.7); /* Lighter color for the file size */
+    min-width: 100px; /* Ensure space for file size, preventing items from becoming too squished */
+}
+
+  .toast {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      background-color: #4CAF50;
+      color: white;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 9999;
+  }
+  .toast.show {
+      opacity: 1;
+  }
+  .context-menu {
+  position: fixed;
+  background-color: #05050e;
+  border: 1px solid #0d0d22;
+  border-radius: 4px;
+  padding: 5px 0;
+  min-width: 150px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+} 
+
+.context-menu-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.context-menu-item:hover {
+  background-color: #2c2e33;
+}
+
+.file-icon-small {
+    width: 16px;
+    height: 16px;
+    color: white;
+    display: none;
+} 
+</style>
+<main id="content">
+  
+   <%
+      function formatLastUpdated(dateString) {
+         const date = new Date(dateString);
+         const now = new Date();
+         const diffTime = Math.abs(now - date);
+         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+         if (diffDays > 30) {
+           return date.toLocaleString('en-US', { 
+             year: 'numeric', 
+             month: 'short', 
+             day: 'numeric', 
+             hour: 'numeric', 
+             minute: '2-digit', 
+             hour12: true 
+           });
+         } else {
+           return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+         }
+       }
+       %>
+   <%
+      function getFileIcon(purpose) {
+        const icons = {
+          programming: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mb-0.5 inline-flex mr-1.5">
+           <path fill-rule="evenodd" d="M4.25 2A2.25 2.25 0 0 0 2 4.25v11.5A2.25 2.25 0 0 0 4.25 18h11.5A2.25 2.25 0 0 0 18 15.75V4.25A2.25 2.25 0 0 0 15.75 2H4.25Zm4.03 6.28a.75.75 0 0 0-1.06-1.06L4.97 9.47a.75.75 0 0 0 0 1.06l2.25 2.25a.75.75 0 0 0 1.06-1.06L6.56 10l1.72-1.72Zm4.5-1.06a.75.75 0 1 0-1.06 1.06L13.44 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06l2.25-2.25a.75.75 0 0 0 0-1.06l-2.25-2.25Z" clip-rule="evenodd" />
+         </svg>
+         `,
+         webDevelopment: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mb-0.5 inline-flex mr-1.5">
+          <path fill-rule="evenodd" d="M4.25 2A2.25 2.25 0 0 0 2 4.25v11.5A2.25 2.25 0 0 0 4.25 18h11.5A2.25 2.25 0 0 0 18 15.75V4.25A2.25 2.25 0 0 0 15.75 2H4.25Zm4.03 6.28a.75.75 0 0 0-1.06-1.06L4.97 9.47a.75.75 0 0 0 0 1.06l2.25 2.25a.75.75 0 0 0 1.06-1.06L6.56 10l1.72-1.72Zm4.5-1.06a.75.75 0 1 0-1.06 1.06L13.44 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06l2.25-2.25a.75.75 0 0 0 0-1.06l-2.25-2.25Z" clip-rule="evenodd" />
+        </svg>
+        `,
+         database: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mb-0.5 inline-flex mr-1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+        </svg>
+        `,
+         folder: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mb-0.5 inline-flex mr-1.5"><path d="M3.75 3A1.75 1.75 0 002 4.75v3.26a3.235 3.235 0 011.75-.51h12.5c.644 0 1.245.188 1.75.51V6.75A1.75 1.75 0 0016.25 5h-4.836a.25.25 0 01-.177-.073L9.823 3.513A1.75 1.75 0 008.586 3H3.75zM3.75 9A1.75 1.75 0 002 10.75v4.5c0 .966.784 1.75 1.75 1.75h12.5A1.75 1.75 0 0018 15.25v-4.5A1.75 1.75 0 0016.25 9H3.75z" /></svg>`,
+          other: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mb-0.5 inline-flex mr-1.5"><path fill-rule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm2.25 8.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 3a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5z" clip-rule="evenodd" /></svg>`,
+         
+        };
+      
+        return icons[purpose] || icons.other;
+      }
+      %>
+      <style>
+        .select-all-checkbox {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 0.5rem;
+        margin-right: 1rem;
+    }
+    
+    .select-all-checkbox input[type="checkbox"] {
+        margin-right: 0.5rem;
+    }
+    
+    .select-all-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.875rem;
+        user-select: none;
+    }
+
+    .toast {
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        background-color: #4CAF50;
+        color: white;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 9999;
+    }
+    .toast.show {
+        opacity: 1;
+    }
+      </style>
+
+    <%- include('../components/instance') %>
+    <div class="bg-white/5 rounded-xl p-6 mb-6">
+      <div class="flex flex-grow-0 items-center text-sm text-neutral-500 overflow-x-hidden">
+     
+      </div>
+      
+      
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-center">Plugins</h2>
+            <div class="flex items-center space-x-2">
+              <br>
+           
+   
+    <!--div class="flex items-center space-x-2">
+        <select 
+            id="sort-by" 
+            class=" bg-black/20 rounded-lg border border-transparent py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+        >
+            <option value="name">Name</option>
+            <option value="size">Size</option>
+            <option value="date">Last Updated</option>
+            <option>&nbsp;</option>
+        </select>
+        
+    </div-->
+</div>
+           
+            
+        </div>
+        <style>
+
+          header {
+              background-color: #333;
+              color: #b0bac5;
+              text-align: center;
+              padding: 1rem;
+          }
+  
+          .plugin-container {
+              display: flex;
+              flex-wrap: wrap;
+              justify-content: center;
+              padding: 1rem;
+              color: #b0bac5;
+              
+          }
+  
+          .plugin {
+              background: #26292f;
+              border: 1px solid #26292f;
+              border-radius: 25px;
+              margin: 10px;
+              padding: 15px;
+              width: 300px;
+              box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+              text-align: center;
+              
+          }
+  
+          .plugin h3 {
+              font-size: 1.2rem;
+              margin-bottom: 10px;
+          }
+  
+          .plugin p {
+              font-size: 0.9rem;
+              color: #b0bac5;;
+          }
+  
+          .plugin .a {
+              display: inline-block;
+              margin-top: 10px;
+              padding: 10px 15px;
+              background-color: #007bff;
+              color: #b0bac5;
+              text-decoration: none;
+              border-radius: 3px;
+          }
+  
+          .plugin .a:hover {
+              background-color: #0056b3;
+              transform: scale(1.05);
+          }
+          .plugin:hover {
+              transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms; 
+              transform: scale(1.05);
+              box-shadow: 0 2px 5px rgba(255, 255, 255, 0.61);
+          }
+  
+          .loading {
+              text-align: center;
+              margin-top: 50px;
+          }
+  
+          .pagination {
+              text-align: center;
+              margin: 20px 0;
+          }
+  
+          .pagination button {
+              padding: 10px 15px;
+              margin: 0 5px;
+              background-color: white;
+              color: black;
+              border: none;
+              border-radius: 3px;
+              cursor: pointer;
+          }
+  
+          .pagination button:disabled {
+              background-color: #ccc;
+              cursor: not-allowed;
+          }
+      </style>
+        <div class="px-4 sm:px-6 lg:px-8">
+            <!-- Search Bar -->
+            <div class="mb-5">
+              <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="Search for plugins..." 
+                class="flex-grow p-2 w-full bg-white/10 border border-white/10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white rounded-lg placeholder-gray-400"
+                oninput="filterPlugins()"
+              />
+            </div>
+          
+            <!-- Plugin List -->
+            <div class="flex flex-wrap justify-center p-4" id="pluginContainer">
+              
+          <div class="loading" id="loading">Loading plugins...
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+              <radialGradient id="a12" cx=".66" fx=".66" cy=".3125" fy=".3125" gradientTransform="scale(1.5)">
+                <stop offset="0" stop-color="#ffffff"></stop>
+                <stop offset=".3" stop-color="#ffffff" stop-opacity=".9"></stop>
+                <stop offset=".6" stop-color="#ffffff" stop-opacity=".6"></stop>
+                <stop offset=".8" stop-color="#ffffff" stop-opacity=".3"></stop>
+                <stop offset="1" stop-color="#ffffff" stop-opacity="0"></stop>
+              </radialGradient>
+              <circle transform-origin="center" fill="none" stroke="url(#a12)" stroke-width="15" stroke-linecap="round" stroke-dasharray="200 1000" stroke-dashoffset="0" cx="100" cy="100" r="70">
+                <animateTransform type="rotate" attributeName="transform" calcMode="spline" dur="2" values="360;0" keyTimes="0;1" keySplines="0 0 1 1" repeatCount="indefinite"></animateTransform>
+              </circle>
+              <circle transform-origin="center" fill="none" opacity=".2" stroke="#ffffff" stroke-width="15" stroke-linecap="round" cx="100" cy="100" r="70"></circle>
+            </svg>
+                    </div>
+            </div>
+          <div class="pagination" id="pagination">
+
+            <button id="loadMore" class="relative px-4 py-2 overflow-hidden font-medium duration-300 border border-b-4 rounded-md outline-none bg-lime-950 text-lime-400 border-lime-400 hover:brightness-150 hover:border-t-4 hover:border-b active:opacity-75 group">
+            
+              <span class="bg-lime-400 shadow-lime-400 absolute -top-[150%] left-0 inline-flex w-80 h-[5px] rounded-md opacity-50 group-hover:top-[150%] duration-500 shadow-[0_0_10px_10px_rgba(0,0,0,0.3)]"></span>
+            
+              Load More
+  
+            </button>
+                </div>   
+                         
+        </div>
+        
+        <script>
+          // Function to open the modal
+          function installPlugin(event, url, plugin_name) {
+            // Prevent any default action (e.g., form submission or redirect)
+            event.preventDefault();
+        
+            const redirectUrl = `/instance/<%= req.params.id %>/plugins/download?downloadUrl=${url}&plugin_name=${plugin_name}`;
+        
+            // Redirect to the plugin download page
+            window.location.href = redirectUrl;
+          }
+        
+          // Function to close the modal
+          function closeModal() {
+            const modal = document.getElementById('pluginInstall');
+            if (modal) {
+              modal.classList.add('opacity-0', 'pointer-events-none');
+              modal.classList.remove('opacity-100', 'pointer-events-auto');
+            }
+          }
+        
+          // Function to handle redirection with the selected Minecraft version
+          function redirectUrlPlugin(id, version) {
+            const pluginId = id;
+            const redirectUrl = `/instance/<%= req.params.id %>/plugins/download/${pluginId}/${version}`;
+        
+            // Redirect to the plugin download page
+            window.location.href = redirectUrl;
+          }
+        
+          const API_URL = "https://api.spiget.org/v2/resources/free";
+          const ITEMS_PER_PAGE = 50;
+          let currentPage = 1;
+          let allPlugins = []; // Store all fetched plugins for search
+        
+          async function fetchPlugins(page = 1) {
+            const container = document.getElementById("pluginContainer");
+            const loading = document.getElementById("loading");
+            const loadMoreButton = document.getElementById("loadMore");
+        
+            if (loading) {
+              loading.style.display = "block";
+            }
+        
+            try {
+              const response = await fetch(`${API_URL}?size=${ITEMS_PER_PAGE}&page=${page}&sort=-downloads`);
+              if (!response.ok) {
+                throw new Error("Failed to fetch plugins.");
+              }
+        
+              const plugins = await response.json();
+              if (!Array.isArray(plugins)) {
+                throw new Error("Unexpected response format.");
+              }
+        
+              if (loading) {
+                loading.style.display = "none";
+              }
+        
+              allPlugins = [...allPlugins, ...plugins]; // Add fetched plugins to the global list
+              renderPlugins(allPlugins);
+        
+              if (plugins.length < ITEMS_PER_PAGE && loadMoreButton) {
+                loadMoreButton.style.display = "none";
+              }
+            } catch (error) {
+              console.error(error);
+              if (loading) {
+                loading.innerText = "Error loading plugins. Please try again later.";
+              }
+            }
+          }
+        
+          function renderPlugins(plugins) {
+            const container = document.getElementById("pluginContainer");
+            if (container) {
+              container.innerHTML = ""; // Clear container
+            }
+        
+            plugins.forEach(plugin => {
+              const pluginDiv = document.createElement("div");
+              pluginDiv.classList.add(
+                "bg-white/5",
+                "border",
+                "border-[#26292f]",
+                "rounded-[25px]",
+                "m-2",
+                "p-4",
+                "w-[300px]",
+                "shadow-md",
+                "text-center",
+                "hover:shadow-lg",
+                "hover:scale-105",
+                "transition-transform",
+                "duration-150"
+              );
+        
+              const content = plugin.file.externalUrl
+                ? `
+                  <div class="lg:flex lg:items-center lg:justify-between bg-[#171717] p-6 rounded-lg">
+                    <div class="min-w-0 flex-1">
+                      <h2 class="text-md font-medium text-white tracking-tight">
+                        <img src="data:image/jpeg;base64,${plugin.icon.data}" alt="${plugin.name} Logo" class="w-12 h-12 rounded-lg inline-block mr-2">
+                        ${plugin.name}
+                      </h2>
+                      <p class="text-sm text-gray-300 mt-1 break-words">
+                        ⭐ ${plugin.rating.average} stars rating
+                      </p>
+                      <div class="flex items-center justify-center mt-2">
+                        <span class="text-xs font-semibold text-gray-300 break-words">${plugin.downloads.toLocaleString()} downloads</span>
+                      </div>
+                      <div class="mt-4 flex space-x-4">
+                        <button onclick="window.location.href='${plugin.externalUrl}'" class="px-full py-full bg-gray-100 text-black rounded-xl hover:bg-gray-300 transition">
+                          Download via External
+                        </button>
+                        <a href="https://spigotmc.org/resources/${plugin.id}" class="px-5 py-2 bg-gray-100 text-black rounded-xl hover:bg-gray-300 transition" target="_blank">
+                          Visit Plugin
+                        </a>
+                      </div>
+                    </div>
+                  </div>`
+                : `
+                  <div class="lg:flex lg:items-center lg:justify-between bg-[#171717] p-6 rounded-lg">
+                    <div class="min-w-0 flex-1">
+                      <h2 class="text-md font-medium text-white tracking-tight">
+                        <img src="data:image/jpeg;base64,${plugin.icon.data}" alt="${plugin.name} Logo" class="w-12 h-12 rounded-lg inline-block mr-2">
+                        ${plugin.name}
+                      </h2>
+                      <p class="text-sm text-gray-300 mt-1 break-words">
+                        ⭐ ${plugin.rating.average} stars rating
+                      </p>
+                      <div class="flex items-center justify-center mt-2">
+                        <span class="text-xs font-semibold text-gray-300 break-words">${plugin.downloads.toLocaleString()} downloads</span>
+                      </div>
+                      <div class="mt-4 flex space-x-4">
+                        <button onclick="installPlugin(event, 'https://api.spiget.org/v2/resources/${plugin.id}/download', '${plugin.name}')" class="px-5 py-2 bg-gray-100 text-black rounded-xl hover:bg-gray-300 transition">
+                          Download
+                        </button>
+                        <a href="https://spigotmc.org/resources/${plugin.id}" class="px-5 py-2 bg-gray-100 text-black rounded-xl hover:bg-gray-300 transition" target="_blank">
+                          Visit Plugin
+                        </a>
+                      </div>
+                    </div>
+                  </div>`;
+        
+              pluginDiv.innerHTML = content;
+              if (container) {
+                container.appendChild(pluginDiv);
+              }
+            });
+          }
+        
+          function searchPlugins() {
+            const searchInput = document.getElementById("searchInput")?.value.toLowerCase() || "";
+            const filteredPlugins = allPlugins.filter(plugin => plugin.name.toLowerCase().includes(searchInput));
+            renderPlugins(filteredPlugins);
+          }
+        
+          document.getElementById("searchInput")?.addEventListener("input", searchPlugins);
+          document.getElementById("loadMore")?.addEventListener("click", () => {
+            currentPage++;
+            fetchPlugins(currentPage);
+          });
+        
+          fetchPlugins(currentPage);
+        </script>
+        
+        
+          
+<div id="installModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+  <div class="bg-white shadow-lg rounded-xl p-8 max-w-md w-full transform scale-95 transition-transform duration-300">
+    <h2 class="text-2xl font-medium mb-4 text-neutral-800">Installing Plugin(s)</h2>
+    <div class="mb-4">
+      <!-- Progress Bar -->
+      <div class="w-full bg-neutral-200 rounded-full h-2.5">
+        <div id="installProgress" class="bg-black h-2.5 rounded-full" style="width: 0%;"></div>
+      </div>
+    </div>
+    <p id="installStatus" class="text-center text-neutral-600">Preparing install...</p>
+  </div>
+</div>
+
+  <!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay">
+  <div class="spinner"></div>
+</div>
+<div id="toast" class="toast">
+  Operation completed successfully
+</div>
+</main>
+  
+   <script>
+      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const instanceId = '<%= req.params.id %>';
+
+
+      function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+      const statsWs = new WebSocket(`${protocol}://${window.location.hostname}:${window.location.port}/stats/${instanceId}`);
+
+      statsWs.onmessage = event => {
+        const stats = JSON.parse(event.data);
+            if (stats.error) {
+                console.error('Error fetching stats:', stats.error);
+                return;
+            }
+
+            const diskUsageRaw = parseFloat(stats.volumeSize);
+            const diskLimitRaw = 10 * 1024; // Assuming 10GB limit
+            const diskUsagePercent = (diskUsageRaw / diskLimitRaw * 100).toFixed(2);
+            document.getElementById('diskUsage').textContent = `${formatBytes(diskUsageRaw * 1024 * 1024)} / ${formatBytes(diskLimitRaw * 1024 * 1024)} (${diskUsagePercent}%)`;
+        
+      }
+    
+   </script>
+</main>
+<%- include('../components/footer') %>

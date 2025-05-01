@@ -1,0 +1,118 @@
+<%- include('components/template') %>
+<body class="bg-[#010103] text-gray-300 font-inter" x-data="{ sidebarOpen: false }" @keydown.escape="sidebarOpen = false">
+    <main class="flex-grow container mx-auto px-4 py-8 animate-fade-in">
+        <div class="flex justify-between items-center w-full mx-auto pb-4 animate-slide-in">
+            <div class="flex flex-col animate-fade-in">
+                <h1 class="text-2xl font-bold text-white animate-bounce">Account Information</h1>
+                <p class="text-gray-400 animate-slide-up">View and manage your account credentials.</p>
+            </div>
+            <nav class="inline-flex py-2 px-4 rounded-xl bg-white/5 animate-slide-in">
+                <ol class="flex items-center space-x-2">
+                    <li>
+                        <a href="#" class="text-sm text-zinc-400 hover:text-white flex items-center gap-2 animate-fade-in">
+                            <i class="fas fa-home animate-spin-slow"></i> <span>Home</span>
+                        </a>
+                    </li>
+                    <li><i class="fas fa-chevron-right text-zinc-400 animate-pulse"></i></li>
+                    <li>
+                        <a href="#" class="text-sm text-white/80 font-medium animate-slide-up">Account</a>
+                    </li>
+                </ol>
+            </nav>
+        </div>
+        <div class="mt-12 flex justify-center">
+            <div class="w-full max-w-md bg-white/5 p-6 rounded-xl border border-white/10 shadow-md animate-scale-in">
+                <div class="text-center mb-6 animate-bounce">
+                    <i class="fas fa-user-circle text-6xl text-gray-200 animate-rotate"></i>
+                </div>
+                <h2 class="text-xl font-semibold text-center mb-4 animate-fade-in">Credentials</h2>
+                <div class="relative mb-6 animate-fade-in">
+                    <input value="<%= user.email %>" class="w-full px-4 py-2 rounded-lg bg-gray-800 text-white border border-gray-700" disabled>
+                    <button onclick="copyEmail()" class="absolute right-3 top-2 text-gray-400 hover:text-white animate-pulse"><i class="fas fa-copy"></i></button>
+                </div>
+                <div class="border-t border-gray-700 pt-6 animate-slide-up">
+                    <h3 class="text-lg font-semibold animate-fade-in">Set a new password</h3>
+                    <form id="change-password-form" action="/change-password" method="POST" class="space-y-4 animate-fade-in">
+                        <input type="password" id="currentPassword" placeholder="Current Password" class="w-full px-4 py-2 rounded-lg bg-gray-800 text-white border border-gray-700 animate-fade-in">
+                        <input type="password" id="newPassword" placeholder="New Password" class="w-full px-4 py-2 rounded-lg bg-gray-800 text-white border border-gray-700 animate-fade-in">
+                        <p class="text-sm text-white/70">Password must contain:<br>• 8+ characters<br>• One uppercase & lowercase<br>• One number</p>
+                        <button type="submit" class="w-full bg-indigo-500 text-white py-2 rounded-lg hover:bg-indigo-600 animate-scale-in">Update Password</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+        function copyEmail() {
+            const emailInput = document.querySelector('input[disabled]');
+            navigator.clipboard.writeText(emailInput.value);
+            alert('Email copied to clipboard!');
+        }
+    </script>
+    <style>
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-fade-in {
+            animation: fade-in 1s ease-in-out;
+        }
+        
+        @keyframes slide-in {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .animate-slide-in {
+            animation: slide-in 0.8s ease-in-out;
+        }
+        
+        @keyframes slide-up {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up {
+            animation: slide-up 1s ease-in-out;
+        }
+        
+        @keyframes scale-in {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .animate-scale-in {
+            animation: scale-in 0.6s ease-in-out;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        .animate-bounce {
+            animation: bounce 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        .animate-pulse {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-rotate {
+            animation: rotate 2s linear infinite;
+        }
+        
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+            animation: spin-slow 4s linear infinite;
+        }
+    </style>
+</body>

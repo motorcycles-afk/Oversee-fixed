@@ -1,0 +1,127 @@
+<%- include('../../components/template') %>
+
+<main id="content" class="p-8 animate-fade-in">
+   <div class="bg-transparent">
+      <div class="sm:flex sm:items-center">
+         <div class="sm:flex-auto">
+            <h1 class="text-lg font-semibold text-white animate-slide-down">
+               <%= req.translations.settings %>
+            </h1>
+            <p class="mt-1 text-sm text-neutral-400 animate-fade-in">
+               <%= req.translations.changeSettings %>
+            </p>
+         </div>
+      </div>
+   </div>
+   
+   <%- include('../../components/settings') %>
+   
+   <div class="bg-white/10 m-8 p-6 rounded-xl shadow-lg animate-scale-in">
+      <h1 class="text-white text-xl px-5 py-3 bg-white/5 rounded-t-xl font-semibold animate-slide-up">
+         <%= req.translations.general %>
+      </h1>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 px-5 py-4">
+         <!-- Change Panel Name -->
+         <div class="mt-4 animate-fade-in">
+            <form action="/admin/settings/change/name" method="POST">
+               <label class="text-neutral-300 text-sm font-medium" for="name">
+                  <%= req.translations.panelName %>
+               </label>
+               <input id="name" name="name" type="text" class="w-full mt-2 p-2 rounded-lg bg-white/10 text-white border border-white/20 focus:ring-2 focus:ring-blue-500 focus:outline-none" value="<%= name %>" placeholder="<%= name %>" required>
+               <button type="submit" class="mt-4 w-full py-2 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-transform transform hover:scale-105 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                  <%= req.translations.save %>
+               </button>
+            </form>
+         </div>
+         
+         <!-- Change Panel Logo -->
+         <div class="mt-4 animate-fade-in">
+            <form action="/admin/settings/change/logo" method="POST" enctype="multipart/form-data">
+               <label class="text-neutral-300 text-sm font-medium" for="logo">
+                  <%= req.translations.panelLogo %>
+               </label>
+               <div class="flex items-center mt-2">
+                  <input id="useImage" name="useImage" type="checkbox" class="w-4 h-4 text-blue-500 bg-gray-700 border-white/20 rounded focus:ring-2 focus:ring-blue-500">
+                  <label for="useImage" class="ml-2 text-sm text-neutral-300">
+                     <%= req.translations.image %>
+                  </label>
+               </div>
+               <div id="imageUploadBox" class="hidden mt-4 animate-scale-in">
+                  <input type="file" name="logo" id="logo" accept="image/*" class="block w-full text-sm text-neutral-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-600 file:text-white hover:file:bg-blue-500 transition">
+               </div>
+               <input type="hidden" name="type" id="logoType" value="none">
+               <button id="logoButton" type="submit" class="mt-4 w-full py-2 px-3 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-transform transform hover:scale-105 focus:ring-2 focus:ring-red-500 focus:outline-none">
+                  <%= req.translations.saveNewLogo %>
+               </button>
+            </form>
+         </div>
+         
+         <!-- Register On/Off Toggle -->
+         <div class="mt-4 animate-fade-in">
+            <form action="/admin/settings/toggle/register" method="POST">
+               <label class="text-neutral-300 text-sm font-medium" for="register">
+                  <%= req.translations.registerPage %>
+               </label>
+               <div class="flex items-center mt-2">
+                  <% if (settings.register === true) { %>
+                  <span class="text-green-500 font-medium"> <%= req.translations.enabled %> </span>
+                  <% } else { %>
+                  <span class="text-red-500 font-medium"> <%= req.translations.disabled %> </span>
+                  <% } %>
+               </div>
+               <button type="submit" class="mt-4 w-full py-2 px-3 rounded-lg transition-transform transform hover:scale-105 focus:ring-2 focus:outline-none <% if (settings.register) { %> bg-red-600 hover:bg-red-500 focus:ring-red-500 <% } else { %> bg-green-600 hover:bg-green-500 focus:ring-green-500 <% } %>">
+                  <% if (settings.register) { %> <%= req.translations.disable %> <% } else { %> <%= req.translations.enable %> <% } %>
+               </button>
+            </form>
+         </div>
+      </div>
+   </div>
+</main>
+
+<%- include('../../components/footer') %>
+
+<style>
+   @keyframes fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+   }
+   @keyframes slide-up {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+   }
+   @keyframes slide-down {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+   }
+   @keyframes scale-in {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+   }
+   .animate-fade-in { animation: fade-in 0.5s ease-out; }
+   .animate-slide-up { animation: slide-up 0.5s ease-out; }
+   .animate-slide-down { animation: slide-down 0.5s ease-out; }
+   .animate-scale-in { animation: scale-in 0.5s ease-out; }
+</style>
+
+<script>
+   document.getElementById('useImage').addEventListener('change', function() {
+      const imageUploadBox = document.getElementById('imageUploadBox');
+      const logoButton = document.getElementById('logoButton');
+      const logoType = document.getElementById('logoType');
+      
+      if (this.checked) {
+         imageUploadBox.classList.remove('hidden');
+         logoButton.textContent = '<%= req.translations.saveNewLogo %>';
+         logoButton.classList.remove('bg-red-600', 'hover:bg-red-500');
+         logoButton.classList.add('bg-green-600', 'hover:bg-green-500');
+         logoType.value = 'image';
+      } else {
+         imageUploadBox.classList.add('hidden');
+         logoButton.textContent = '<%= req.translations.removeLogo %>';
+         logoButton.classList.remove('bg-green-600', 'hover:bg-green-500');
+         logoButton.classList.add('bg-red-600', 'hover:bg-red-500');
+         logoType.value = 'none';
+      }
+   });
+</script>

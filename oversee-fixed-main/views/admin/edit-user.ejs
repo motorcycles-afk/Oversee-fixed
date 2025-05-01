@@ -1,0 +1,138 @@
+<%- include('../components/template') %>
+<main id="content" class="flex justify-center items-center min-h-screen bg-neutral-900 text-white">
+  <div class="bg-neutral-800 rounded-2xl shadow-xl p-8 w-full max-w-lg animate-fade-in">
+    <h1 class="text-lg font-semibold mb-2 animate-slide-down animate-text-glow"><%= req.translations.editUser %></h1>
+    <p class="text-sm text-neutral-400 mb-6 animate-slide-down animate-text-fade"><%= req.translations.editUserDetails %></p>
+    
+    <form action="/admin/users/edit/<%= editUser.userId %>" method="POST" class="space-y-4">
+      <div class="animate-fade-in">
+        <label class="block text-sm text-neutral-300 mb-1"><%= req.translations.username %>:</label>
+        <input type="text" name="username" value="<%= editUser.username %>" 
+          class="w-full px-4 py-2 rounded-lg bg-neutral-700 text-white border border-neutral-600 focus:ring focus:ring-blue-500 transition duration-200 ease-in-out transform hover:scale-105" 
+          placeholder="<%= req.translations.usernamePlaceholder %>">
+      </div>
+
+      <div class="animate-fade-in">
+        <label class="block text-sm text-neutral-300 mb-1"><%= req.translations.email %>:</label>
+        <input type="email" name="email" value="<%= editUser.email %>" 
+          class="w-full px-4 py-2 rounded-lg bg-neutral-700 text-white border border-neutral-600 focus:ring focus:ring-blue-500 transition duration-200 ease-in-out transform hover:scale-105" 
+          placeholder="<%= req.translations.emailPlaceholder %>">
+      </div>
+
+      <div class="animate-fade-in">
+        <label class="block text-sm text-neutral-300 mb-1"><%= req.translations.passwordLabel %>:</label>
+        <input type="password" name="password" 
+          class="w-full px-4 py-2 rounded-lg bg-neutral-700 text-white border border-neutral-600 focus:ring focus:ring-blue-500 transition duration-200 ease-in-out transform hover:scale-105" 
+          placeholder="******">
+      </div>
+
+      <div class="animate-fade-in">
+        <label class="block text-sm text-neutral-300 mb-1"><%= req.translations.admin %>:</label>
+        <select name="admin" 
+          class="w-full px-4 py-2 rounded-lg bg-neutral-700 text-white border border-neutral-600 focus:ring focus:ring-blue-500 transition duration-200 ease-in-out transform hover:scale-105">
+          <option value="true" <%= editUser.admin ? 'selected' : '' %>><%= req.translations.true %></option>
+          <option value="false" <%= !editUser.admin ? 'selected' : '' %>><%= req.translations.false %></option>
+        </select>
+      </div>
+
+      <div class="animate-fade-in">
+        <label class="block text-sm text-neutral-300 mb-1"><%= req.translations.verifiedStatus %>:</label>
+        <select name="verified" 
+          class="w-full px-4 py-2 rounded-lg bg-neutral-700 text-white border border-neutral-600 focus:ring focus:ring-blue-500 transition duration-200 ease-in-out transform hover:scale-105">
+          <option value="true" <%= editUser.verified ? 'selected' : '' %>><%= req.translations.true %></option>
+          <option value="false" <%= !editUser.verified ? 'selected' : '' %>><%= req.translations.false %></option>
+        </select>
+      </div>
+
+      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-white font-medium shadow-md transition duration-200 ease-in-out transform hover:scale-105 animate-bounce-once">
+        <%= req.translations.saveChanges %>
+      </button>
+    </form>
+    
+    <!-- User identity information section -->
+    <div class="mt-8 pt-6 border-t border-neutral-700">
+      <h2 class="text-md font-semibold mb-4 text-white">User Identity Information</h2>
+      
+      <!-- IP Address information -->
+      <div class="mb-4 p-4 bg-neutral-700 rounded-lg">
+        <h3 class="text-sm font-semibold mb-2 text-blue-400">IP Address</h3>
+        <div class="text-sm text-white">
+          <p><strong>IP:</strong> <%= userIpData.ip %></p>
+          <% if (userIpData.registrationDate) { %>
+            <p><strong>Registration Date:</strong> <%= new Date(userIpData.registrationDate).toLocaleString() %></p>
+          <% } %>
+        </div>
+      </div>
+      
+      <!-- Browser Fingerprint information -->
+      <div class="p-4 bg-neutral-700 rounded-lg">
+        <h3 class="text-sm font-semibold mb-2 text-blue-400">Browser Fingerprint</h3>
+        <% if (fingerprintDetails) { %>
+          <div class="text-sm text-white">
+            <div class="mb-2">
+              <p><strong>Browser:</strong> <%= fingerprintDetails.browser || 'Unknown' %></p>
+              <p><strong>OS:</strong> <%= fingerprintDetails.os || 'Unknown' %></p>
+              <p><strong>Device:</strong> <%= fingerprintDetails.device || 'Unknown' %></p>
+            </div>
+            
+            <% if (fingerprintDetails.headers) { %>
+              <details>
+                <summary class="cursor-pointer text-blue-300 hover:text-blue-200 transition">View HTTP Headers</summary>
+                <div class="mt-2 p-2 bg-neutral-800 rounded">
+                  <p><strong>Accept:</strong> <%= fingerprintDetails.headers.accept || 'N/A' %></p>
+                  <p><strong>Language:</strong> <%= fingerprintDetails.headers.language || 'N/A' %></p>
+                  <p><strong>Encoding:</strong> <%= fingerprintDetails.headers.encoding || 'N/A' %></p>
+                  <p><strong>Connection:</strong> <%= fingerprintDetails.headers.connection || 'N/A' %></p>
+                </div>
+              </details>
+            <% } %>
+          </div>
+        <% } else { %>
+          <p class="text-sm text-neutral-400">No fingerprint data available</p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</main>
+<%- include('../components/footer') %>
+
+<style>
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  @keyframes slideDown {
+    from { transform: translateY(-10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .animate-slide-down {
+    animation: slideDown 0.4s ease-in-out;
+  }
+  @keyframes bounceOnce {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  .animate-bounce-once:hover {
+    animation: bounceOnce 0.3s ease-in-out;
+  }
+  @keyframes textGlow {
+    0% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.5); }
+    50% { text-shadow: 0 0 10px rgba(255, 255, 255, 0.8); }
+    100% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.5); }
+  }
+  .animate-text-glow {
+    animation: textGlow 1.5s infinite alternate;
+  }
+  @keyframes textFade {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+  }
+  .animate-text-fade {
+    animation: textFade 2s infinite alternate;
+  }
+</style>

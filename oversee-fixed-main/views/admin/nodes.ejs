@@ -1,0 +1,538 @@
+<%- include('../components/admin_template') %>
+<main id="content">
+   <div class="bg-transparent">
+      <div class="sm:flex sm:items-center px-8 pt-4">
+         <div class="sm:flex-auto">
+           <h1 class="text-base font-medium leading-6 text-white mb-4 heavy"><%= req.translations.nodes %></h1>
+         </div>
+       </div>
+       <% if (req.query.err=="none" ) { %>
+        <div class="my-4 rounded-full shadow-sm border border-white/10 px-3 py-2 pt-2.5">
+          <span class="text-white text-xs mt-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-8 mb-0.5 text-indigo-300 rounded-full shadow-sm bg-indigo-500/15 p-1.5 mr-2.5 inline-flex">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+          </svg>
+          Action completed - Node Have Been Created Successfully. 
+          </span>
+          </div>          
+        <% } %>
+    <% if (req.query.err == "EDITED") { %>
+      <div class="my-4 rounded-full shadow-sm border border-white/10 px-3 py-2 pt-2.5">
+        <span class="text-white text-xs mt-0.5">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-8 mb-0.5 text-indigo-300 rounded-full shadow-sm bg-indigo-500/15 p-1.5 mr-2.5 inline-flex">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+        </svg>
+        Action completed - Node Have Been Edited Successfully. 
+        </span>
+        </div> 
+      <% } %>
+      <div class="mt-4 sm:ml-8 sm:mt-0 sm:flex-none">
+      <div class="px-6 py-3 mt-6 grid grid-cols-12 gap-4 flex flex-col items-center text-sm font-medium text-white/50" id="nodeTable">
+        <div class="col-span-2"><%= req.translations.name %></div>
+        <div class="col-span-2">Status</div>
+        <div class="col-span-2">Version</div>
+        <div class="col-span-2"><%= req.translations.connection %></div>
+        <div class="col-span-2"><%= req.translations.actions %></div>
+        <div class="flex items-center gap-3"> <!-- Moved button and server list directly under "Instances" -->
+          <!-- Button -->
+          <% if (req.user.admin === true) { %>
+           <!-- Actions -->
+           <div class="flex items-center gap-3">
+        <button id="createButton" type="button" class="hover:scale-95 flex items-center justify-center h-11 gap-2 px-5 text-sm font-medium text-white transition-all duration-200 rounded-full shadow bg-indigo-500 hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-800 focus:ring-offset-2 ring-offset-gray-200 hover:shadow-none">
+        <span>Create</span>
+        
+        </button>
+        </div>
+        </div>
+        </div>
+          <% } %>
+          <style>
+            @keyframes slow-ping {
+              0% {
+                transform: scale(1);
+                opacity: 1;
+              }
+              75%, 100% {
+                transform: scale(2);
+                opacity: 0;
+              }
+            }
+            
+            .slow-ping {
+              animation: slow-ping 3s linear infinite;
+            }
+            </style>
+      
+      <% nodes.forEach(function(node) { %>
+      <div id="nodeslist" class="mb-4 bg-white/5 rounded-2xl hover:bg-white/10 border-2 border-dashed border-transparent hover:border-white/5 transition px-6 py-4 grid grid-cols-12 gap-4 items-center cursor-pointer">
+              
+              <!-- Server Name & Node -->
+              <div class="col-span-2">
+                  <div class="font-medium text-white"><%= node.name %></div>
+              </div>
+
+              <!-- Status -->
+
+              <div class="col-span-2 ">
+                  <div class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-zinc-500/20 text-zinc-300">
+                
+                    <% if (node.status == "Online") { %>
+                      <div class="flex items-center space-x-2">
+                
+                          
+                          <div class="slow-ping w-4 h-4 rounded-full bg-emerald-500/20 flex justify-center items-center">
+                              <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                          </div>                   
+                        <span class="text-emerald-300 text-sm">Online</span>
+                      </div>
+                    <% } else if (node.status == "Offline") { %>
+                      <div class="flex items-center space-x-2">
+                        <div class="w-4 h-4 rounded-full bg-red-500/20 flex justify-center items-center">
+                          <div class="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                        </div>
+                        <span class="text-red-300 text-sm">Offline</span>
+                      </div>
+                    <% } %>
+                    
+              </div>
+              </div>
+
+              <!-- Memory Usage -->
+              <div class="col-span-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs bg-zinc-500/20 text-white px-2 py-1 rounded shadow-sm">
+                        <code class="font-mono">
+                          <%= (node.versionRelease || 'unknown').replace('HydraD ', '').trim() %>
+                        </code>
+                    </span>
+                </div>
+            </div>
+            
+            
+
+              <!-- CPU Usage -->
+              <div class="col-span-2">
+                  <div class="flex  items-center gap-2">
+                    
+                      <span data-status class="text-xs"><%= node.address %>:<%= node.port %></span>
+                  </div>
+              </div>
+
+              <div class="flex space-x-2">
+                <!-- Full buttons for larger screens -->
+                <button 
+                  class="hidden md:inline-block bg-white hover:bg-gray-200 text-black font-medium py-1 px-4 rounded-full text-sm hover:scale-95" 
+                  onclick="configure('<%= node.id %>')">
+                  Configure
+                </button>
+                <button 
+                  class="hidden md:inline-block bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-4 rounded-full text-sm hover:scale-95" 
+                  onclick="deletenode('<%= node.id %>')">
+                  Remove
+                </button>
+              
+                <!-- Icons for mobile screens -->
+                <button 
+                  class="inline-block md:hidden text-white hover:text-white cursor-pointer" 
+                  onclick="configure2('<%= node.id %>')">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z" />
+                  </svg>
+                  
+                </button>
+                <button 
+                  class="inline-block md:hidden text-red-600 hover:text-red-700 cursor-pointer" 
+                  onclick="deletenode('<%= node.id %>')">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              
+          </div>
+   <% }); %>
+      <div id="nodeForm" class="mt-6 px-8 w-full hidden">
+        <div class="p-3 bg-transparent shadow-xl rounded-xl overflow-hidden sm:p-6 lg:p-10 card" style="width: 800px;">
+            <form>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="nodeName" class="text-white text-sm tracking-tight mb-2"><%= req.translations.name %>:</label>
+                        <input id="nodeName" class="rflex-grow p-2 w-full bg-white/10 border border-white/10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white rounded-lg placeholder-gray-400" placeholder="My node">
+                    </div>
+    
+                    <div>
+                        <label for="nodeRam" class="text-white text-sm tracking-tight mb-2"><%= req.translations.ram %> (GB):</label>
+                        <input id="nodeRam" class="flex-grow p-2 w-full bg-white/10 border border-white/10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white rounded-lg placeholder-gray-400" placeholder="10240">
+                    </div>
+    
+                    <div>
+                        <label for="nodeDisk" class="text-white text-sm tracking-tight mb-2"><%= req.translations.disk %> (GB):</label>
+                        <input id="nodeDisk" class="flex-grow p-2 w-full bg-white/10 border border-white/10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white rounded-lg placeholder-gray-400" placeholder="320">
+                    </div>
+    
+                    <div>
+                        <label for="nodeProcessor" class="text-white text-sm tracking-tight mb-2"><%= req.translations.cpu %>:</label>
+                        <input id="nodeProcessor" class="flex-grow p-2 w-full bg-white/10 border border-white/10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white rounded-lg placeholder-gray-400" placeholder="Ryzen 9">
+                    </div>
+    
+                    <div>
+                        <label for="nodeAddress" class="text-white text-sm tracking-tight mb-2"><%= req.translations.addressIP %>:</label>
+                        <input id="nodeAddress" class="flex-grow p-2 w-full bg-white/10 border border-white/10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white rounded-lg placeholder-gray-400" placeholder="192.168.1.1 or my.hostnamehere.com">
+                    </div>
+    
+                    <div>
+                        <label for="nodePort" class="text-white text-sm tracking-tight mb-2"><%= req.translations.deamonPort %>:</label>
+                        <input id="nodePort" class="flex-grow p-2 w-full bg-white/10 border border-white/10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white rounded-lg placeholder-gray-400" placeholder="3002">
+                    </div>
+    
+                    <div class="col-span-2">
+                        <label for="tagInput" class="text-white text-sm tracking-tight mb-2"><%= req.translations.tags %>:</label>
+                        <div id="tagContainer" class="flex flex-wrap gap-2 mb-2"></div>
+                        <input id="tagInput" class="flex-grow p-2 w-full bg-white/10 border border-white/10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white rounded-lg placeholder-gray-400" placeholder="Add a tag and press Enter">
+                    </div>
+    
+                    <div class="col-span-2">
+                        <button id="createNodeBtn" type="button" class="w-32 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-lg transition duration-300">
+                            <%= req.translations.create %>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+      
+</main>
+<script>
+async function deletenode(nodeId) {
+  try {
+    let response = await fetch('/nodes/delete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ nodeId })
+    });
+
+    let result = await response.json();
+
+    if (response.ok) {
+      alert('Node successfully deleted');
+      window.location.reload();
+    } else if (result.error === "There are instances on the node") {
+      const confirmDelete = confirm('There are still instances on this node. Do you want to delete all instances and remove the node?');
+
+      if (confirmDelete) {
+        response = await fetch(`/nodes/delete?deleteinstances=true`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ nodeId })
+        });
+
+        result = await response.json();
+
+        if (response.ok) {
+          alert('Node and instances successfully deleted');
+          window.location.reload();
+        } 
+      }
+    }
+  } catch (error) {
+    console.error('Request failed:', error);
+  }
+}
+
+
+
+  document.getElementById('createButton').addEventListener('click', function() {
+    var table = document.getElementById('nodeTable');
+    var form = document.getElementById('nodeForm');
+    const nodeslist = document.getElementById('nodeslist');
+    if (table.style.display !== 'none') {
+      table.style.display = 'none';
+      form.style.display = 'block';
+    } else {
+      table.style.display = 'block';
+      form.style.display = 'none';
+    }
+  });
+
+  async function configure(nodeId) {
+    const response = await fetch(`/admin/node/${nodeId}/configure-command`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch configure command');
+    }
+    const data = await response.json();
+    showPopup(data.configureCommand);
+  }
+  async function configure2(nodeId) {
+    const response = await fetch(`/admin/node/${nodeId}/configure-command`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch configure command');
+    }
+    const data = await response.json();
+    showPopup2(data.configureCommand);
+  }
+
+  function showPopup(command) {
+    const popup = document.createElement('div');
+    popup.style.position = 'fixed';
+    popup.style.top = '50%';
+    popup.style.left = '50%';
+    popup.style.transform = 'translate(-50%, -50%) scale(0)';
+    popup.style.padding = '20px';
+    popup.style.width = '550px';
+    popup.style.height = 'auto';
+    popup.style.maxHeight = '80vh';
+    popup.style.borderRadius = '10px';
+    popup.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.1)';
+    popup.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+    popup.style.opacity = '0';
+    popup.classList.add('bg-[#141414]', 'text-black', 'rounded-xl', 'shadow-xl');
+
+    popup.innerHTML = `
+       <div class="flex justify-center items-center mb-2 mt-20 md:mt-10">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 md:h-24 md:w-24" viewBox="0 0 48 48">
+        <linearGradient id="gradient1" x1="21.241" x2="3.541" y1="39.241" y2="21.541" gradientUnits="userSpaceOnUse">
+            <stop offset=".108" stop-color="#0d7044"></stop>
+            <stop offset=".433" stop-color="#11945a"></stop>
+        </linearGradient>
+        <path fill="url(#gradient1)" d="M16.599,41.42L1.58,26.401c-0.774-0.774-0.774-2.028,0-2.802l4.019-4.019c0.774-0.774,2.028-0.774,2.802,0L23.42,34.599c0.774,0.774,0.774,2.028,0,2.802l-4.019,4.019C18.627,42.193,17.373,42.193,16.599,41.42z"></path>
+        <linearGradient id="gradient2" x1="-15.77" x2="26.403" y1="43.228" y2="43.228" gradientTransform="rotate(134.999 21.287 38.873)" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#2ac782"></stop>
+            <stop offset="1" stop-color="#21b876"></stop>
+        </linearGradient>
+        <path fill="url(#gradient2)" d="M12.58,34.599L39.599,7.58c0.774-0.774,2.028-0.774,2.802,0l4.019,4.019c0.774,0.774,0.774,2.028,0,2.802L19.401,41.42c-0.774,0.774-2.028,0.774-2.802,0l-4.019-4.019C11.807,36.627,11.807,35.373,12.58,34.599z"></path>
+    </svg>
+</div>
+
+<p class="font-bold text-center text-lg md:text-2xl text-white mt-5">Token created.</p>
+
+<h3 class="text-center text-base md:text-lg text-white mt-5">
+    To auto-configure your node, run the following command:
+</h3>
+
+<pre class="status-gray p-3 rounded-xl mb-4 mt-3 overflow-x-auto">
+    <code id="commandCode" class="text-emerald-500 text-sm md:text-base">${command}</code>
+</pre>
+
+<div class="flex justify-center">
+    <button id="doneBtn" 
+        class="rounded-xl bg-white text-black px-4 py-2 text-sm md:text-base font-medium shadow-lg transition hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 mt-4">
+        Done
+    </button>
+</div>
+    `;
+    document.body.appendChild(popup);
+
+    // Trigger showing the popup
+    setTimeout(() => {
+        popup.style.transform = 'translate(-50%, -50%) scale(1)';
+        popup.style.opacity = '1';
+    }, 10);
+
+    const commandCode = document.getElementById('commandCode');
+    commandCode.addEventListener('click', function () {
+        const textarea = document.createElement('textarea');
+        textarea.value = commandCode.textContent;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+    });
+
+    document.getElementById('doneBtn').addEventListener('click', function () {
+        // Hide the popup with a transition
+        popup.style.transform = 'translate(-50%, -50%) scale(0)';
+        popup.style.opacity = '0';
+
+        setTimeout(() => {
+            document.body.removeChild(popup);
+        }, 300); // Match the transition duration
+    });
+}
+
+
+function showPopup2(command) {
+    const popup = document.createElement('div');
+    popup.style.position = 'fixed';
+    popup.style.top = '50%';
+    popup.style.left = '50%';
+    popup.style.transform = 'translate(-50%, -50%) scale(0)';
+    popup.style.padding = '20px';
+    popup.style.width = '550px';
+    popup.style.height = 'auto';
+    popup.style.maxHeight = '80vh';
+    popup.style.borderRadius = '10px';
+    popup.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.1)';
+    popup.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+    popup.style.opacity = '0';
+    popup.classList.add('bg-[#141414]', 'text-black', 'rounded-xl', 'shadow-xl');
+
+    popup.innerHTML = `
+<pre class="status-gray p-3 rounded-xl mb-4 mt-3 overflow-x-auto">
+    <code id="commandCode" class="text-emerald-500 text-sm md:text-base">${command}</code>
+</pre>
+
+<div class="flex justify-center">
+    <button id="doneBtn" 
+        class="rounded-xl bg-white text-black px-4 py-2 text-sm md:text-base font-medium shadow-lg transition hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 mt-4">
+        Done
+    </button>
+</div>
+    `;
+    document.body.appendChild(popup);
+
+    // Trigger showing the popup
+    setTimeout(() => {
+        popup.style.transform = 'translate(-50%, -50%) scale(1)';
+        popup.style.opacity = '1';
+    }, 10);
+
+    const commandCode = document.getElementById('commandCode');
+    commandCode.addEventListener('click', function () {
+        const textarea = document.createElement('textarea');
+        textarea.value = commandCode.textContent;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        alert('Command Copied to ClipBoard')
+        document.body.removeChild(textarea);
+    });
+
+    document.getElementById('doneBtn').addEventListener('click', function () {
+        // Hide the popup with a transition
+        popup.style.transform = 'translate(-50%, -50%) scale(0)';
+        popup.style.opacity = '0';
+
+        setTimeout(() => {
+            document.body.removeChild(popup);
+        }, 300); // Match the transition duration
+    });
+}
+
+  
+
+  function setupBadgeInput(inputId, containerId, validator) {
+    const input = document.getElementById(inputId);
+    const container = document.getElementById(containerId);
+
+    function processInput() {
+        const value = input.value.trim();
+
+        const tags = value.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+
+        let allValid = true;
+        tags.forEach(tag => {
+            if (tag !== '' && (!validator || validator(tag))) {
+                createBadge(tag);
+            } else {
+                allValid = false;
+            }
+        });
+
+        if (!allValid) {
+            alert('Invalid format. Ports should be like this: 8080:8080 [external:internal]. For example, if you wanted to assign 8080 to the internal port 2022, you could do: 8080:2022.');
+        }
+
+        input.value = '';
+    }
+
+    input.addEventListener('blur', function() {
+        processInput();
+    });
+    input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            processInput();
+        }
+    });
+
+    input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const value = input.value.trim();
+
+            const tags = value.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+
+            let allValid = true;
+            tags.forEach(tag => {
+                if (tag !== '' && (!validator || validator(tag))) {
+                    createBadge(tag, container, input);
+                } else {
+                    allValid = false;
+                }
+            });
+
+            if (!allValid) {
+                alert('Invalid format. Ports should be like this: 8080:8080 [external:internal]. For example, if you wanted to assign 8080 to the internal port 2022, you could do: 8080:2022.');
+            }
+
+            input.value = '';
+        }
+    });
+
+
+    function createBadge(text, container, inputField) {
+    const badge = document.createElement('span');
+    badge.className = 'bg-white/5 text-neutral-300 text-xs font-medium mr-1 px-2.5 py-0.5 rounded-xl';
+    badge.textContent = text;
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'ml-2 text-neutral-600';
+    removeBtn.textContent = '×';
+    removeBtn.onclick = function() {
+      container.removeChild(badge);
+    };
+
+    badge.appendChild(removeBtn);
+    container.appendChild(badge);
+    inputField.value = '';
+  }
+  }
+
+  setupBadgeInput('tagInput', 'tagContainer');
+
+  document.getElementById('createNodeBtn').addEventListener('click', function() {
+    const name = document.getElementById('nodeName').value;
+    const tags = Array.from(document.getElementById('tagContainer').children).map(badge => badge.textContent.slice(0, -1).trim());
+    const ram = document.getElementById('nodeRam').value;
+    const disk = document.getElementById('nodeDisk').value;
+    const processor = document.getElementById('nodeProcessor').value;
+    const address = document.getElementById('nodeAddress').value;
+    const port = document.getElementById('nodePort').value;
+
+    const nodeData = {
+      name,
+      tags: tags.join(' - '),
+      ram,
+      disk,
+      processor,
+      address,
+      port
+    };
+
+    fetch('/nodes/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(nodeData)
+    })
+    .then(response => {
+      if (response.ok) {
+        return response.json();
+      }
+      throw new Error('Failed to create node');
+    })
+    .then(data => {
+      console.log('Node created:', data);
+      window.location.href = '../admin/nodes?err=none'
+    })
+    .catch(error => alert('Error creating node:', error));
+  });
+</script>
+<%- include('../components/footer') %>

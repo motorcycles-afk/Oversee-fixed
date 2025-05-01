@@ -1,0 +1,179 @@
+<%- include('../components/template') %>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs/loader.js"></script>
+<main id="content">
+    <style>
+        
+.editor-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: white;
+}
+
+.editor-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.editor-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.editor-button.primary {
+    background-color: #4f46e5;
+    color: white;
+}
+
+.editor-button.primary:hover {
+    background-color: #4338ca;
+}
+
+.editor-button.secondary {
+    background-color: #27292c;
+    color: white;
+}
+
+.editor-button.secondary:hover {
+    background-color: #27292c;
+}
+
+.editor-main {
+    flex-grow: 1;
+    position: relative;
+}
+    </style>
+     <%- include('../components/instance') %>
+     <div class="bg-white/5 rounded-xl p-6 mb-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold heavy">Edit File</h2>
+            <div class="flex items-center space-x-2">
+                <div class="p-2.5 bg-black/20 rounded-lg">
+                   </div>
+        </div>
+    </div>
+    <% 
+        let formattedFile = req.query.path ? '/' + req.params.file : req.params.file;
+        let query = req.query.path ? '?path=' + req.query.path : '';
+    %>  
+    <h1 class="text-neutral-200 text-md px-8"><a class="text-neutral-400 hover:text-neutral-300 transition" href="../?path=<%= req.query.path %>">/app/data/<%= req.query.path %></a><%= formattedFile %></h1>
+    
+    <div class="pt-8 overflow-hidden" style="width: 250%; height: 65vh;" id="editor"></div>
+    <div class="flex mt-8 space-x-4">
+        <a href="/instance/<%= req.params.id %>/files" type="button" class="block ml-8 rounded-xl bg-transparent border border-white/5 hover:bg-neutral-600/10 px-3 py-2 text-center text-sm font-normal text-neutral-300 shadow-lg transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+            Back
+        </a>
+        <button id="saveButton" onclick="saveFile()" class="editor-button primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            Save & Exit
+        </button>
+    </div>
+                </div>
+           
+    
+
+<%
+    const fileExtension = formattedFile.split('.').pop();
+    const language = fileExtension === 'js' ? 'javascript'
+                       : fileExtension === 'json' ? 'json'
+                       : fileExtension === 'html' ? 'html'
+                       : fileExtension === 'toml' ? 'toml'
+                       : fileExtension === 'css' ? 'css'
+                       : fileExtension === 'ts' ? 'typescript'
+                       : fileExtension === 'md' ? 'markdown'
+                       : fileExtension === 'txt' ? 'plaintext'
+                       : fileExtension === 'py' ? 'python'
+                       : fileExtension === 'sh' ? 'shell'
+                       : fileExtension === 'go' ? 'go'
+                       : fileExtension === 'php' ? 'php'
+                       : fileExtension === 'sql' ? 'sql'
+                       : fileExtension === 'c' ? 'c'
+                       : fileExtension === 'cpp' ? 'cpp'
+                       : fileExtension === 'java' ? 'java'
+                       : fileExtension === 'rb' ? 'ruby'
+                       : fileExtension === 'pl' ? 'perl'
+                       : fileExtension === 'yml' ? 'yaml'
+                       : fileExtension === 'xml' ? 'xml'
+                       : 'plaintext';
+%>
+
+<script>
+require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs' }});
+require(['vs/editor/editor.main'], function () {
+    var editor = monaco.editor.create(document.getElementById('editor'), {
+        value: <%- JSON.stringify(file) %>,
+        language: '<%= language %>',
+        theme: 'vs-dark',
+        rules: [
+        { token: 'comment', foreground: '7F7F7F', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'C586C0', fontStyle: 'bold' }
+    ],
+    colors: {
+        'editor.background': '#1E1E1E',
+        'editor.foreground': '#D4D4D4',
+    }
+    });
+    window.editor = editor;
+    window.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            saveFile();
+        }
+    });
+});
+window.addEventListener('resize', () => {
+    const editorContainer = document.getElementById('editor');
+    const editor = monaco.editor.getModels()[0].getOptions();
+    editor.layout({ width: editorContainer.clientWidth, height: editorContainer.clientHeight });
+  });
+
+function saveFile() {
+    var button = document.getElementById('saveButton');
+    button.disabled = true;
+    var fileContent = window.editor.getValue();
+    var filename = <%- JSON.stringify(req.params.file) %>;
+    var instanceId = <%- JSON.stringify(req.params.id) %>;
+    const WhenDone = `/instance/${instanceId}/files/`;
+
+    fetch(`/instance/${instanceId}/files/edit/${filename}<%= query %>`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            content: fileContent
+        })
+    }).then(response => response.json())
+      .then(data => {
+          if (data && data.message) {
+              button.textContent = 'Done!';
+            window.location.href = WhenDone;
+              setTimeout(() => {
+                  button.disabled = false;
+                  button.textContent = 'Save File';
+              }, 1000);
+          } else {
+              alert('Error saving file');
+              button.disabled = false;
+              button.textContent = 'Save File';
+          }
+      })
+      .catch(error => {
+          console.error('Error:', error);
+          alert('Failed to save the file.');
+          button.disabled = false;
+          button.textContent = 'Save File';
+      });
+}
+</script>
+</main>
+<%- include('../components/footer') %>

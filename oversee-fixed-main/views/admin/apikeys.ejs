@@ -1,0 +1,99 @@
+<%- include('../components/admin_template') %>
+<main id="content" class="p-6">
+  <div class="bg-transparent">
+    <div class="sm:flex sm:items-center px-6 pt-4">
+      <div class="sm:flex-auto">
+        <h1 class="text-lg font-semibold text-white"><%= req.translations.APIKeys %></h1>
+        <p class="text-sm text-gray-300"><%= req.translations.APIKeysText %></p>
+      </div>
+      <button id="createButton" class="ml-auto px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+        + <%= req.translations.createNewAPIKey %>
+      </button>
+    </div>
+
+    <!-- Alert Messages -->
+    <% if (req.query.err) { %>
+      <div id="alertBox" class="mt-4 p-4 rounded-lg text-white <% if (req.query.err == 'CREATED') { %>bg-green-600<% } else { %>bg-red-600<% } %>">
+        <p class="font-semibold">
+          <% if (req.query.err == 'CREATED') { %>
+            ✅ API Key Created Successfully!
+          <% } else if (req.query.err == 'DELETED') { %>
+            🗑️ API Key Deleted Successfully!
+          <% } %>
+        </p>
+      </div>
+    <% } %>
+
+    <!-- API Keys Table -->
+    <div id="nodeTable" class="mt-6 w-full overflow-x-auto">
+      <table class="w-full text-sm text-gray-300">
+        <thead class="bg-gray-700">
+          <tr>
+            <th class="px-4 py-3">ID</th>
+            <th class="px-4 py-3">Key</th>
+            <th class="px-4 py-3">Created At</th>
+            <th class="px-4 py-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-600">
+          <% apiKeys.forEach(function(key) { %>
+            <tr>
+              <td class="px-4 py-3"><%= key.id %></td>
+              <td class="px-4 py-3 flex items-center space-x-2">
+                <code class="bg-gray-800 px-2 py-1 rounded"><%= key.key %></code>
+                <button class="copyBtn text-gray-400 hover:text-white" data-key="<%= key.key %>">
+                  📋
+                </button>
+              </td>
+              <td class="px-4 py-3"><%= key.createdAt %></td>
+              <td class="px-4 py-3">
+                <button class="deleteBtn px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700" data-keyid="<%= key.id %>">
+                  ❌ Delete
+                </button>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- API Key Creation Form -->
+    <div id="nodeForm" class="mt-6 hidden">
+      <button id="createNodeBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+        ✅ <%= req.translations.clickToConfirmCreation %>
+      </button>
+    </div>
+  </div>
+</main>
+
+<script>
+  document.getElementById("createButton").addEventListener("click", function () {
+    document.getElementById("nodeTable").classList.toggle("hidden");
+    document.getElementById("nodeForm").classList.toggle("hidden");
+  });
+
+  document.getElementById("createNodeBtn").addEventListener("click", function () {
+    fetch("/apikeys/create", { method: "POST", headers: { "Content-Type": "application/json" } })
+      .then((response) => response.json())
+      .then(() => window.location.href = '/admin/apikeys?err=CREATED')
+      .catch(error => alert("Failed to create API Key: " + error.message));
+  });
+
+  document.querySelectorAll(".deleteBtn").forEach(button => {
+    button.addEventListener("click", function () {
+      if (!confirm("Are you sure you want to delete this API Key?")) return;
+      fetch("/apikeys/delete", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keyId: this.dataset.keyid }) })
+        .then(() => window.location.href = '/admin/apikeys?err=DELETED')
+        .catch(error => alert("Failed to delete API Key: " + error.message));
+    });
+  });
+
+  document.querySelectorAll(".copyBtn").forEach(button => {
+    button.addEventListener("click", function () {
+      navigator.clipboard.writeText(this.dataset.key);
+      alert("API Key copied to clipboard!");
+    });
+  });
+</script>
+
+<%- include('../components/footer') %>

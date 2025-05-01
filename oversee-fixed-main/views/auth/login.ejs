@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= name %> - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://api.fontshare.com/v2/css?f[]=general-sans@500,300,600,400,700&display=swap" rel="stylesheet">
+  <style>
+    .fade-in { opacity: 0; transform: translateY(20px); }
+  </style>
+</head>
+
+<body class="bg-[#0b0d0f] text-gray-300 min-h-screen flex flex-col">
+   <main class="flex-grow flex items-center justify-center p-8">
+       <div class="bg-white/10 p-8 md:p-10 rounded-2xl shadow-2xl max-w-md w-full fade-in border border-white/20 backdrop-blur-lg">
+        <div class="flex justify-center mb-6 fade-in">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-indigo-400">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+            </svg>
+        </div>
+
+        <h2 class="text-center text-4xl font-extrabold text-white tracking-tight fade-in">Welcome back!</h2>
+        <p class="text-center text-gray-400 mt-2 text-base fade-in">Sign in to your account to continue</p>
+           
+        <!-- User/Password Login Form -->
+        <form method="POST" action="/auth/login" class="mt-8 space-y-4 fade-in">
+            <div>
+                <input type="text" 
+                id="username" 
+                name="username" 
+                class="flex-grow p-3 w-full bg-white/10 border border-white/30 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white rounded-lg placeholder-gray-400" 
+                placeholder="Username" 
+                required>
+            </div>
+            <div>
+                <input type="password" 
+                id="password" 
+                name="password" 
+                class="flex-grow p-3 w-full bg-white/10 border border-white/30 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white rounded-lg placeholder-gray-400" 
+                placeholder="Password" 
+                required>
+            </div>
+            <button type="submit" class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-5 rounded-lg transition duration-300 transform hover:scale-105 shadow-md">                     
+                <span>Sign in</span>
+            </button>
+        </form>
+        
+        <!-- Register & Forgot Password -->
+        <div class="text-center mt-4 text-sm fade-in">
+            <p class="text-gray-400">Don't have an account? 
+                <a href="/register" class="text-indigo-400 hover:text-indigo-300 transition">Register here</a>
+            </p>
+            <p class="mt-2">
+                <a href="/forgot-password" class="text-gray-400 hover:text-indigo-300 transition">Forgot your password?</a>
+            </p>
+        </div>
+       </div>
+   </main>
+
+   <script>
+     gsap.to(".fade-in", { opacity: 1, y: 0, duration: 1, stagger: 0.2, ease: "power2.out" });
+   </script>
+</body>
+</html>

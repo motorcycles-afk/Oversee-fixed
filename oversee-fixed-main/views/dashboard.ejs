@@ -1,0 +1,99 @@
+<div>
+  <%- include('./components/template') %>
+  <!-- Main Content -->
+  <main class="container flex-grow px-6 py-8 mx-auto animate-fade-in">
+    <div class="flex items-center justify-between w-full pb-6 mx-auto animate-slide-in">
+      <!-- Welcome text and subtext on the left -->
+      <div class="flex flex-col">
+        <h1 class="text-2xl font-bold text-white" style="font-family: 'Cabin';">Dashboard</h1>
+        <p class="text-gray-400 text-md">Monitor and manage your resources effectively.</p>
+      </div>
+
+      <!-- Breadcrumbs -->
+      <nav aria-label="Breadcrumb" class="bg-white/10 rounded-xl px-4 py-2 animate-fade-in">
+        <ol class="flex items-center space-x-3 text-gray-400">
+          <li>
+            <a href="#" class="hover:text-gray-200 flex items-center gap-2">
+              <i class="fas fa-home text-lg"></i>
+              <span>Home</span>
+            </a>
+          </li>
+          <li class="text-gray-500">/</li>
+          <li class="text-white">Dashboard</li>
+        </ol>
+      </nav>
+    </div>
+
+    <!-- Welcome Banner -->
+    <div class="bg-gradient-to-r from-blue-700 to-blue-900 rounded-xl p-6 shadow-lg text-center animate-pop-in">
+      <h2 class="text-xl font-semibold text-white animate-text-fade">Welcome back!</h2>
+      <p class="text-gray-300">Manage your wallet, deploy resources, and upgrade deployments.</p>
+    </div>
+
+    <!-- Resource Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-8 animate-fade-in">
+      <div class="p-6 bg-white/10 rounded-xl shadow-md text-center hover:scale-105 transition-transform">
+        <h3 class="text-lg font-medium text-white">Total RAM</h3>
+        <p class="text-3xl font-bold text-blue-400"><%= max_resources && max_resources.ram != null ? max_resources.ram : 'N/A' %> MiB</p>
+      </div>
+      <div class="p-6 bg-white/10 rounded-xl shadow-md text-center hover:scale-105 transition-transform">
+        <h3 class="text-lg font-medium text-white">Total CPU</h3>
+        <p class="text-3xl font-bold text-blue-400"><%= max_resources && max_resources.cores != null ? max_resources.cores : 'N/A' %> Cores</p>
+      </div>
+      <div class="p-6 bg-white/10 rounded-xl shadow-md text-center hover:scale-105 transition-transform">
+        <h3 class="text-lg font-medium text-white">Total Disk</h3>
+        <p class="text-3xl font-bold text-blue-400"><%= max_resources && max_resources.disk != null ? max_resources.disk : 'N/A' %> GiB</p>
+      </div>
+    </div>
+
+    <!-- Upgrade, Manage, and Create Server Boxes -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-8 animate-fade-in">
+      <div class="p-6 bg-green-700/20 rounded-xl shadow-md text-center hover:scale-105 transition-transform">
+        <h3 class="text-lg font-medium text-green-400">Upgrade Resources</h3>
+        <p class="text-gray-300">Need more power? Upgrade your RAM, CPU, or storage.</p>
+        <a href="/store" class="mt-4 inline-flex items-center gap-2 px-6 py-2 font-medium text-white bg-green-600 rounded-lg hover:bg-green-500 transition-all">
+          <i class="fas fa-arrow-up"></i> Upgrade Now
+        </a>
+      </div>
+      <div class="p-6 bg-yellow-700/20 rounded-xl shadow-md text-center hover:scale-105 transition-transform">
+        <h3 class="text-lg font-medium text-yellow-400">Manage Servers</h3>
+        <p class="text-gray-300">View, configure, and control your deployed servers.</p>
+        <a href="/instances" class="mt-4 inline-flex items-center gap-2 px-6 py-2 font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-500 transition-all">
+          <i class="fas fa-cogs"></i> Manage Servers
+        </a>
+      </div>
+      <div class="p-6 bg-blue-700/20 rounded-xl shadow-md text-center hover:scale-105 transition-transform">
+        <h3 class="text-lg font-medium text-blue-400">Create Server</h3>
+        <p class="text-gray-300">Deploy a new server with ease.</p>
+        <a href="/create-server" class="mt-4 inline-flex items-center gap-2 px-6 py-2 font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-500 transition-all">
+          <i class="fas fa-plus-circle"></i> Create Server
+        </a>
+      </div>
+    </div>
+  </main>
+  <%- include('./components/footer') %>
+</div>
+
+<style>
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-in {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes pop-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.animate-fade-in { animation: fade-in 0.8s ease-out; }
+.animate-slide-in { animation: slide-in 0.6s ease-out; }
+.animate-pop-in { animation: pop-in 0.5s ease-out; }
+@keyframes text-fade {
+  0% { opacity: 0; transform: translateY(-10px); }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-text-fade { animation: text-fade 1.2s ease-out; }
+</style>
