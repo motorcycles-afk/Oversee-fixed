@@ -21,6 +21,29 @@ const nodemailer = require('nodemailer');
 const { sendTestEmail } = require('../handlers/email.js');
 
 /**
+ * Gets the real client IP address, accounting for proxies like Cloudflare
+ * @param {Object} req - Express request object
+ * @returns {string} The client's real IP address
+ */
+function getClientIP(req) {
+  // Check for Cloudflare headers
+  const cfIP = req.headers['cf-connecting-ip'];
+  if (cfIP) {
+    return cfIP;
+  }
+  
+  // Check for X-Forwarded-For header (standard proxy header)
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    // X-Forwarded-For can contain multiple IPs, take the first one (client IP)
+    return forwardedFor.split(',')[0].trim();
+  }
+  
+  // Fall back to the standard IP
+  return req.ip;
+}
+
+/**
  * Middleware to verify if the user is an administrator.
  * Checks if the user object exists and if the user has admin privileges. If not, redirects to the
  * home page. If the user is an admin, proceeds to the next middleware or route handler.
@@ -269,7 +292,7 @@ router.post('/nodes/create', isAdmin, async (req, res) => {
   await db.set('nodes', nodes);
 
   // Return the node object including the configureKey
-  logAudit(req.user.userId, req.user.username, 'node:create', req.ip);
+  logAudit(req.user.userId, req.user.username, 'node:create', getClientIP(req));
   res.status(201).json({
     ...node,
     configureKey: configureKey // Include configureKey in the response
@@ -355,7 +378,7 @@ router.post('/nodes/delete', async (req, res) => {
     nodes.splice(nodes.indexOf(node.id), 1);
     await db.set('nodes', nodes);
 
-    logAudit(req.user.userId, req.user.username, 'node:delete', req.ip);
+    logAudit(req.user.userId, req.user.username, 'node:delete', getClientIP(req));
     res.status(200).json({ success: true });
   } catch (error) {
     console.error('Error deleting node:', error);
@@ -445,7 +468,7 @@ router.post('/users/create', isAdmin, async (req, res) => {
   await db.set('users', users);
   await db.set(`coins-${email}`, 0);
 
-  logAudit(req.user.userId, req.user.username, 'user:create', req.ip);
+  logAudit(req.user.userId, req.user.username, 'user:create', getClientIP(req));
 
   res.status(201).send(newUser);
 });
@@ -462,7 +485,7 @@ router.delete('/user/delete', isAdmin, async (req, res) => {
 
   users.splice(userIndex, 1);
   await db.set('users', users);
-  logAudit(req.user.userId, req.user.username, 'user:delete', req.ip);
+  logAudit(req.user.userId, req.user.username, 'user:delete', getClientIP(req));
   res.status(204).send();
 });
 
@@ -546,7 +569,7 @@ router.post('/admin/users/edit/:userId', isAdmin, async (req, res, next) => {
 
   await db.set('users', users);
 
-  logAudit(req.user.userId, req.user.username, 'user:edit', req.ip);
+  logAudit(req.user.userId, req.user.username, 'user:edit', getClientIP(req));
 
   if (req.user.userId === userId) {
     return req.logout(err => {
@@ -574,7 +597,7 @@ router.delete('/nodes/delete', isAdmin, async (req, res) => {
 
   await db.set('nodes', newNodes);
   await db.delete(nodeId + '_node');
-  logAudit(req.user.userId, req.user.username, 'node:delete', req.ip);
+  logAudit(req.user.userId, req.user.username, 'node:delete', getClientIP(req));
   res.status(204).send();
 });
 
@@ -665,7 +688,7 @@ router.post('/admin/settings/toggle/force-verify', isAdmin, async (req, res) => 
     settings.forceVerify = !settings.forceVerify;
 
     await db.set('settings', settings);
-    logAudit(req.user.userId, req.user.username, 'force-verify:edit', req.ip); // Adjust as per your logging needs
+    logAudit(req.user.userId, req.user.username, 'force-verify:edit', getClientIP(req)); // Adjust as per your logging needs
 
     res.redirect('/admin/settings');
   } catch (err) {
@@ -679,7 +702,7 @@ router.post('/admin/settings/change/name', isAdmin, async (req, res) => {
   const name = req.body.name;
   try {
     await db.set('name', [name]);
-    logAudit(req.user.userId, req.user.username, 'name:edit', req.ip);
+    logAudit(req.user.userId, req.user.username, 'name:edit', getClientIP(req));
     res.redirect('/admin/settings?changednameto=' + name);
   } catch (err) {
     console.error(err);
@@ -710,7 +733,7 @@ router.post('/admin/settings/change/theme/button-color', isAdmin, async (req, re
   try {
     theme['button-color'] = buttoncolor;
     await fs.writeFileSync('./storage/theme.json', JSON.stringify(theme, null, 2));
-    logAudit(req.user.userId, req.user.username, 'name:edit', req.ip);
+    logAudit(req.user.userId, req.user.username, 'name:edit', getClientIP(req));
     res.redirect('/admin/settings/theme?changedbuttoncolorto=' + buttoncolor);
   } catch (err) {
     console.error(err);
@@ -724,7 +747,7 @@ router.post('/admin/settings/change/theme/paneltheme-color', isAdmin, async (req
   try {
     theme['paneltheme-color'] = paneltheme;
     await fs.writeFileSync('./storage/theme.json', JSON.stringify(theme, null, 2));
-    logAudit(req.user.userId, req.user.username, 'name:edit', req.ip);
+    logAudit(req.user.userId, req.user.username, 'name:edit', getClientIP(req));
     res.redirect('/admin/settings/theme?changedpanelcolorto=' + paneltheme);
   } catch (err) {
     console.error(err);
@@ -740,7 +763,7 @@ router.post('/admin/settings/toggle/theme/footer', isAdmin, async (req, res) => 
 
     await db.set('settings', settings);
     const action = settings.footer ? 'enabled' : 'disabled';
-    logAudit(req.user.userId, req.user.username, 'footer:' + action, req.ip);
+    logAudit(req.user.userId, req.user.username, 'footer:' + action, getClientIP(req));
 
     res.redirect('/admin/settings/theme');
   } catch (err) {
@@ -763,7 +786,7 @@ router.post('/admin/settings/saveSmtpSettings', async (req, res) => {
       fromAddress: smtpFromAddress
     });
 
-    logAudit(req.user.userId, req.user.username, 'SMTP:edit', req.ip);
+    logAudit(req.user.userId, req.user.username, 'SMTP:edit', getClientIP(req));
     res.redirect('/admin/settings/smtp?msg=SmtpSaveSuccess');
   } catch (error) {
     console.error('Error saving SMTP settings:', error);
@@ -825,7 +848,7 @@ router.post('/admin/settings/change/logo', isAdmin, upload.single('logo'), async
         fs.unlinkSync(logoPath);
       }
       await db.set('logo', false);
-      logAudit(req.user.userId, req.user.username, 'logo:edit', req.ip);
+      logAudit(req.user.userId, req.user.username, 'logo:edit', getClientIP(req));
       res.redirect('/admin/settings');
     } else {
       res.status(400).send('Invalid request');
@@ -840,7 +863,7 @@ router.post('/admin/settings/toggle/register', isAdmin, upload.single('logo'), a
   let settings = await db.get('settings');
   settings.register = !settings.register;
   await db.set('settings', settings);
-  logAudit(req.user.userId, req.user.username, 'register:edit', req.ip);
+  logAudit(req.user.userId, req.user.username, 'register:edit', getClientIP(req));
   res.redirect('/admin/settings');
 });
 /**
@@ -1055,7 +1078,7 @@ router.get('/admin/instance/delete/:id', isAdmin, async (req, res) => {
     }
     
     await deleteInstance(instance);
-    logAudit(req.user.userId, req.user.username, 'instance:delete', req.ip);
+    logAudit(req.user.userId, req.user.username, 'instance:delete', getClientIP(req));
     res.redirect('/admin/instances');
   } catch (error) {
     console.error('Error in delete instance endpoint:', error);
@@ -1103,7 +1126,7 @@ router.post('/admin/instances/suspend/:id', isAdmin, async (req, res) => {
 
     await db.set('instances', instances);
 
-    logAudit(req.user.userId, req.user.username, 'instance:suspend', req.ip);
+    logAudit(req.user.userId, req.user.username, 'instance:suspend', getClientIP(req));
     res.redirect('/admin/instances');
   } catch (error) {
     console.error('Error in suspend instance endpoint:', error);
@@ -1136,7 +1159,7 @@ router.post('/admin/instances/unsuspend/:id', isAdmin, async (req, res) => {
 
     await db.set('instances', instances);
 
-    logAudit(req.user.userId, req.user.username, 'instance:unsuspend', req.ip);
+    logAudit(req.user.userId, req.user.username, 'instance:unsuspend', getClientIP(req));
 
     res.redirect('/admin/instances');
   } catch (error) {

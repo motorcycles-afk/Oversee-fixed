@@ -19,6 +19,29 @@ const UAParser = require('ua-parser-js');
 
 const router = express.Router();
 
+/**
+ * Gets the real client IP address, accounting for proxies like Cloudflare
+ * @param {Object} req - Express request object
+ * @returns {string} The client's real IP address
+ */
+function getClientIP(req) {
+  // Check for Cloudflare headers
+  const cfIP = req.headers['cf-connecting-ip'];
+  if (cfIP) {
+    return cfIP;
+  }
+  
+  // Check for X-Forwarded-For header (standard proxy header)
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    // X-Forwarded-For can contain multiple IPs, take the first one (client IP)
+    return forwardedFor.split(',')[0].trim();
+  }
+  
+  // Fall back to the standard IP
+  return req.ip;
+}
+
 // Initialize passport
 router.use(passport.initialize());
 router.use(passport.session());
@@ -145,10 +168,13 @@ async function addUserToUsersTable(username, email, password, verified, req) {
     users.push(newUser);
     await db.set('users', users);
 
+    // Get real client IP
+    const clientIP = getClientIP(req);
+
     // Store IP address in registry
     let ipRegistry = await db.get('ip_registry') || [];
     ipRegistry.push({
-      ip: req.ip,
+      ip: clientIP,
       userId: userId,
       username: username,
       email: email,
@@ -432,7 +458,8 @@ async function initializeRoutes() {
             try {
               const userExists = await doesUserExist(username);
               const emailExists = await doesEmailExist(email);
-              const ipRegistered = await isIPRegistered(req.ip);
+              const clientIP = getClientIP(req);
+              const ipRegistered = await isIPRegistered(clientIP);
               const fingerprint = await generateFingerprint(req);
               const fingerprintRegistered = await isFingerprintRegistered(fingerprint);
           
