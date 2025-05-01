@@ -49,6 +49,10 @@ const { init } = require('./handlers/init.js');
 
 const log = new CatLoggr();
 
+// Configure Express to trust proxy headers (like X-Forwarded-For)
+// This is crucial for getting the correct client IP behind proxies like Cloudflare
+app.set('trust proxy', true);
+
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 

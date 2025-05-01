@@ -25,20 +25,19 @@ const router = express.Router();
  * @returns {string} The client's real IP address
  */
 function getClientIP(req) {
-  // Check for Cloudflare headers
+  console.log("getClientIP Headers:", req.headers); // Log all headers
   const cfIP = req.headers['cf-connecting-ip'];
   if (cfIP) {
+    console.log("getClientIP found Cloudflare IP:", cfIP);
     return cfIP;
   }
-  
-  // Check for X-Forwarded-For header (standard proxy header)
   const forwardedFor = req.headers['x-forwarded-for'];
   if (forwardedFor) {
-    // X-Forwarded-For can contain multiple IPs, take the first one (client IP)
-    return forwardedFor.split(',')[0].trim();
+    const clientIp = forwardedFor.split(',')[0].trim();
+    console.log("getClientIP found X-Forwarded-For IP:", clientIp);
+    return clientIp;
   }
-  
-  // Fall back to the standard IP
+  console.log("getClientIP falling back to req.ip:", req.ip);
   return req.ip;
 }
 
@@ -111,8 +110,12 @@ async function doesEmailExist(email) {
 }
 
 async function isIPRegistered(ip) {
+  console.log("[isIPRegistered] Checking IP:", ip);
   const ipRegistry = await db.get('ip_registry') || [];
-  return ipRegistry.some(entry => entry.ip === ip);
+  console.log("[isIPRegistered] Current IP Registry (first 5):", ipRegistry.slice(0, 5)); // Log first 5 entries
+  const found = ipRegistry.some(entry => entry.ip === ip);
+  console.log("[isIPRegistered] IP found:", found);
+  return found;
 }
 
 async function generateFingerprint(req) {
@@ -136,8 +139,12 @@ async function generateFingerprint(req) {
 }
 
 async function isFingerprintRegistered(fingerprint) {
+  console.log("[isFingerprintRegistered] Checking Fingerprint (truncated):", fingerprint.substring(0, 100) + "...");
   const fingerprintRegistry = await db.get('fingerprint_registry') || [];
-  return fingerprintRegistry.some(entry => entry.fingerprint === fingerprint);
+  console.log("[isFingerprintRegistered] Current Fingerprint Registry count:", fingerprintRegistry.length); // Log count
+  const found = fingerprintRegistry.some(entry => entry.fingerprint === fingerprint);
+  console.log("[isFingerprintRegistered] Fingerprint found:", found);
+  return found;
 }
 
 async function createUser(username, email, password, req) {
@@ -454,31 +461,41 @@ async function initializeRoutes() {
 
           router.post('/auth/register', async (req, res) => {
             const { username, email, password } = req.body;
+            console.log("[REGISTER START] Attempting registration for:", { username, email }); // Log start
           
             try {
               const userExists = await doesUserExist(username);
               const emailExists = await doesEmailExist(email);
-              const clientIP = getClientIP(req);
-              const ipRegistered = await isIPRegistered(clientIP);
-              const fingerprint = await generateFingerprint(req);
-              const fingerprintRegistered = await isFingerprintRegistered(fingerprint);
-          
+
               if (userExists || emailExists) {
+                console.log("[REGISTER BLOCKED] User or email already exists.");
                 return res.redirect('/register?err=UserExists');
               }
-              
+
+              const clientIP = getClientIP(req);
+              console.log("[REGISTER CHECK] Checking IP:", clientIP);
+              const ipRegistered = await isIPRegistered(clientIP);
+
               if (ipRegistered) {
-                return res.redirect('/register?err=MultipleAccountsNotAllowed');
+                console.log("[REGISTER BLOCKED] IP already registered:", clientIP);
+                return res.redirect('/register?err=MultipleAccountsNotAllowed&reason=ip'); // Add reason for debugging
               }
-              
+
+              const fingerprint = await generateFingerprint(req);
+              console.log("[REGISTER CHECK] Checking Fingerprint:", fingerprint.substring(0, 100) + "..."); // Log truncated fingerprint
+              const fingerprintRegistered = await isFingerprintRegistered(fingerprint);
+
               if (fingerprintRegistered) {
-                return res.redirect('/register?err=MultipleAccountsNotAllowed');
+                console.log("[REGISTER BLOCKED] Fingerprint already registered.");
+                return res.redirect('/register?err=MultipleAccountsNotAllowed&reason=fingerprint'); // Add reason
               }
           
+              console.log("[REGISTER PROCEED] No existing user, IP, or fingerprint found. Creating user...");
               await createUser(username, email, password, req);
+              console.log("[REGISTER SUCCESS] User created successfully.");
               res.redirect('/login?msg=AccountCreated');
             } catch (error) {
-              console.error('Error handling registration:', error);
+              console.error('[REGISTER ERROR] Error handling registration:', error);
               res.status(500).send('Internal server error');
             }
           });
