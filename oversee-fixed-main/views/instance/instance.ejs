@@ -102,7 +102,7 @@ const eulaPopupHTML = `
 <main class="flex-grow container mx-auto px-4 py-8 transition-all">
     <%- include('../components/instance') %>
     <% if (Array.isArray(files) && files.length > 0 && !files.some(file => file.name === 'eula.txt')) { %>
-        <% if (instance.imageData.features && instance.imageData.features.includes('eula')) { %>
+        <% if (instance && instance.imageData && instance.imageData.features && instance.imageData.features.includes('eula')) { %>
             <script>
                 document.addEventListener('DOMContentLoaded', () => {
                     // Show the EULA popup if required
